@@ -13,12 +13,9 @@ import {
   Award,
   BookOpen,
   FileText,
-  ArrowRight,
   Sparkles,
-  Shield,
-  HelpCircle,
   RefreshCw,
-  TrendingUp,
+  MinusCircle,
 } from 'lucide-react';
 
 import { useAuth } from '@/components/AuthProvider';
@@ -29,7 +26,7 @@ export default function StudentResultReviewPage() {
   const code = (params.code as string)?.toUpperCase();
 
   const [resultData, setResultData] = useState<any>(null);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'correct'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'correct' | 'incorrect' | 'unanswered'>('all');
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -66,15 +63,30 @@ export default function StudentResultReviewPage() {
   const course = resultData?.course;
   const questions = resultData?.reviewQuestions || [];
 
+  const correctQuestions = questions.filter((q: any) => q.isCorrect);
+  const incorrectQuestions = questions.filter((q: any) => q.isAnswered && !q.isCorrect);
+  const unansweredQuestions = questions.filter((q: any) => !q.isAnswered);
+
   const filteredQuestions = questions.filter((q: any) => {
-    if (activeFilter === 'incorrect') return !q.isCorrect;
     if (activeFilter === 'correct') return q.isCorrect;
+    if (activeFilter === 'incorrect') return q.isAnswered && !q.isCorrect;
+    if (activeFilter === 'unanswered') return !q.isAnswered;
     return true;
   });
 
-  const durMins = Math.floor((attempt?.completionDurationSeconds || 702) / 60);
-  const durSecs = (attempt?.completionDurationSeconds || 702) % 60;
+  const durationSecs = attempt?.completionDurationSeconds ?? 0;
+  const durMins = Math.floor(durationSecs / 60);
+  const durSecs = durationSecs % 60;
   const formattedDuration = `${durMins}m ${durSecs}s`;
+
+  const totalQuestions = attempt?.totalQuestions ?? questions.length ?? 0;
+  const correctCount = attempt?.correctCount ?? correctQuestions.length;
+  const incorrectCount = attempt?.incorrectCount ?? incorrectQuestions.length;
+  const unansweredCount = attempt?.unansweredCount ?? unansweredQuestions.length;
+  const percentageScore = attempt?.percentageScore ?? 0;
+  const scoreMarks = attempt?.score ?? 0;
+  const rank = attempt?.rank ?? 1;
+  const totalParticipants = attempt?.totalParticipants ?? 1;
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900 pb-16">
@@ -113,7 +125,7 @@ export default function StudentResultReviewPage() {
                 {course?.code || 'CS301'}
               </span>
               <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-                {assessment?.title || 'DBMS — Internal Assessment 01'}
+                {assessment?.title || 'Course Assessment'}
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
                 Examinee: <strong className="text-slate-800">{attempt?.studentName || user?.displayName || user?.email?.split('@')[0] || 'Student Candidate'}</strong> ({attempt?.studentRollNo || (user?.email ? user.email.split('@')[0].toUpperCase() : '2024CS1048')})
@@ -122,7 +134,7 @@ export default function StudentResultReviewPage() {
 
             {attempt?.status === 'AUTO_SUBMITTED' && (
               <div className="text-xs font-mono text-rose-700 bg-rose-50 px-3.5 py-1.5 rounded-lg border border-rose-200 font-bold">
-                Auto-Submitted (2 Full-Screen Exits)
+                Auto-Submitted ({attempt?.autoSubmitReason === 'TAB_SWITCH_LIMIT_EXCEEDED' ? 'Tab Switch Policy Enforced' : 'Full-Screen Violation Limit Exceeded'})
               </div>
             )}
           </div>
@@ -132,21 +144,21 @@ export default function StudentResultReviewPage() {
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="text-[11px] font-mono text-slate-500 font-bold uppercase">Final Score</div>
               <div className="text-4xl font-extrabold text-slate-900 mt-1">
-                {attempt?.percentageScore || 82}%
+                {percentageScore}%
               </div>
               <div className="text-[11px] text-emerald-600 mt-1 font-bold">
-                {attempt?.score || 12.25} / {attempt?.totalQuestions || 15} Marks
+                {scoreMarks} / {totalQuestions} Marks
               </div>
             </div>
 
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="text-[11px] font-mono text-slate-500 font-bold uppercase">Accuracy</div>
               <div className="text-4xl font-extrabold text-emerald-600 mt-1">
-                {attempt?.correctCount || 12}
-                <span className="text-base text-slate-400 font-normal"> / {attempt?.totalQuestions || 15}</span>
+                {correctCount}
+                <span className="text-base text-slate-400 font-normal"> / {totalQuestions}</span>
               </div>
               <div className="text-[11px] text-slate-500 mt-1 font-medium">
-                {attempt?.incorrectCount || 3} Incorrect
+                {incorrectCount} Incorrect · {unansweredCount} Unanswered
               </div>
             </div>
 
@@ -163,10 +175,10 @@ export default function StudentResultReviewPage() {
             <div className="p-5 rounded-2xl bg-slate-50 border border-slate-200">
               <div className="text-[11px] font-mono text-slate-500 font-bold uppercase">Class Rank</div>
               <div className="text-4xl font-extrabold text-blue-700 mt-1 font-mono">
-                #{attempt?.rank || 7}
+                #{rank}
               </div>
               <div className="text-[11px] text-slate-500 mt-1 font-medium">
-                Top 15% of Examinees
+                {totalParticipants > 1 ? `Rank ${rank} of ${totalParticipants} Students` : 'Classroom Session'}
               </div>
             </div>
           </div>
@@ -184,11 +196,11 @@ export default function StudentResultReviewPage() {
               <div className="grid sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
                 <div>
                   <span className="text-emerald-700 font-bold">Mastered Concepts: </span>
-                  <span className="text-slate-900 font-semibold">{attempt.performanceSummary.strongTopics?.join(', ')}</span>
+                  <span className="text-slate-900 font-semibold">{attempt.performanceSummary.strongTopics?.join(', ') || 'None yet'}</span>
                 </div>
                 <div>
                   <span className="text-amber-800 font-bold">Recommended Revision: </span>
-                  <span className="text-slate-900 font-semibold">{attempt.performanceSummary.weakTopics?.join(', ')}</span>
+                  <span className="text-slate-900 font-semibold">{attempt.performanceSummary.weakTopics?.join(', ') || 'All topics'}</span>
                 </div>
               </div>
             </div>
@@ -204,10 +216,10 @@ export default function StudentResultReviewPage() {
             </div>
 
             {/* Filter pills */}
-            <div className="flex items-center gap-1.5 text-xs font-mono font-bold">
+            <div className="flex items-center gap-1.5 text-xs font-mono font-bold flex-wrap">
               <button
                 onClick={() => setActiveFilter('all')}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                   activeFilter === 'all'
                     ? 'bg-slate-900 text-white shadow-sm'
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
@@ -216,24 +228,34 @@ export default function StudentResultReviewPage() {
                 All ({questions.length})
               </button>
               <button
-                onClick={() => setActiveFilter('incorrect')}
-                className={`px-3 py-1 rounded-lg transition-all ${
-                  activeFilter === 'incorrect'
-                    ? 'bg-rose-600 text-white shadow-sm'
-                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                Incorrect ({questions.filter((q: any) => !q.isCorrect).length})
-              </button>
-              <button
                 onClick={() => setActiveFilter('correct')}
-                className={`px-3 py-1 rounded-lg transition-all ${
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
                   activeFilter === 'correct'
                     ? 'bg-emerald-600 text-white shadow-sm'
                     : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
                 }`}
               >
-                Correct ({questions.filter((q: any) => q.isCorrect).length})
+                Correct ({correctQuestions.length})
+              </button>
+              <button
+                onClick={() => setActiveFilter('incorrect')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  activeFilter === 'incorrect'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                Incorrect ({incorrectQuestions.length})
+              </button>
+              <button
+                onClick={() => setActiveFilter('unanswered')}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer ${
+                  activeFilter === 'unanswered'
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                Unanswered ({unansweredQuestions.length})
               </button>
             </div>
           </div>
@@ -244,7 +266,11 @@ export default function StudentResultReviewPage() {
               <div
                 key={q.questionId}
                 className={`p-6 rounded-2xl bg-white border shadow-sm space-y-4 ${
-                  q.isCorrect ? 'border-slate-200' : 'border-rose-200'
+                  q.isCorrect
+                    ? 'border-slate-200'
+                    : q.isAnswered
+                    ? 'border-rose-200 bg-rose-50/10'
+                    : 'border-slate-200'
                 }`}
               >
                 {/* Header */}
@@ -262,10 +288,15 @@ export default function StudentResultReviewPage() {
                         <CheckCircle2 className="w-3.5 h-3.5" />
                         Correct (+1.0)
                       </span>
-                    ) : (
+                    ) : q.isAnswered ? (
                       <span className="inline-flex items-center gap-1 text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-0.5 rounded-full border border-rose-200">
                         <XCircle className="w-3.5 h-3.5" />
                         Incorrect (-0.25)
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                        <MinusCircle className="w-3.5 h-3.5 text-slate-400" />
+                        Unanswered (0.0)
                       </span>
                     )}
                   </div>
@@ -302,12 +333,17 @@ export default function StudentResultReviewPage() {
 
                         {isCorrectAnswer && (
                           <span className="text-[10px] font-mono uppercase bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
-                            Correct
+                            Correct Answer
                           </span>
                         )}
                         {isStudentPick && !isCorrectAnswer && (
                           <span className="text-[10px] font-mono uppercase bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
                             Your Choice
+                          </span>
+                        )}
+                        {isStudentPick && isCorrectAnswer && (
+                          <span className="text-[10px] font-mono uppercase bg-emerald-700 text-white px-2 py-0.5 rounded-full font-bold">
+                            Your Choice ✓
                           </span>
                         )}
                       </div>

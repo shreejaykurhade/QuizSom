@@ -98,38 +98,38 @@ export default function TeacherResultsAnalyticsPage() {
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
           <div className="text-[11px] text-slate-500 font-medium">Participants</div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-1">{analytics?.totalParticipants || 48}</div>
-          <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">100% Turnout</div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-1">{analytics?.totalParticipants ?? 0}</div>
+          <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">{analytics?.totalParticipants ? 'Active Session' : 'No Attempts'}</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
           <div className="text-[11px] text-slate-500 font-medium">Class Average</div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-1">{analytics?.averageScorePercentage || 72}%</div>
-          <div className="text-[10px] text-emerald-600 font-semibold mt-0.5">+4% vs Pre-Test</div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-1">{analytics?.averageScorePercentage ?? 0}%</div>
+          <div className="text-[10px] text-slate-500 font-semibold mt-0.5">Average Score</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
           <div className="text-[11px] text-slate-500 font-medium">Median Score</div>
-          <div className="text-2xl font-extrabold text-slate-900 mt-1">{analytics?.medianScorePercentage || 74}%</div>
-          <div className="text-[10px] text-slate-500 mt-0.5 font-mono">Std Dev: ±8.2</div>
+          <div className="text-2xl font-extrabold text-slate-900 mt-1">{analytics?.medianScorePercentage ?? 0}%</div>
+          <div className="text-[10px] text-slate-500 mt-0.5 font-mono">50th Percentile</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
           <div className="text-[11px] text-slate-500 font-medium">Highest Score</div>
-          <div className="text-2xl font-extrabold text-emerald-600 mt-1">{analytics?.highestScorePercentage || 96}%</div>
-          <div className="text-[10px] text-slate-500 mt-0.5">Ananya Iyer</div>
+          <div className="text-2xl font-extrabold text-emerald-600 mt-1">{analytics?.highestScorePercentage ?? 0}%</div>
+          <div className="text-[10px] text-slate-500 mt-0.5">Top Score</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
           <div className="text-[11px] text-slate-500 font-medium">Lowest Score</div>
-          <div className="text-2xl font-extrabold text-amber-600 mt-1">{analytics?.lowestScorePercentage || 38}%</div>
-          <div className="text-[10px] text-amber-700 font-medium mt-0.5">Remedial Flag</div>
+          <div className="text-2xl font-extrabold text-amber-600 mt-1">{analytics?.lowestScorePercentage ?? 0}%</div>
+          <div className="text-[10px] text-slate-500 font-medium mt-0.5">Lowest Score</div>
         </div>
 
         <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm">
           <div className="text-[11px] text-slate-500 font-medium">Integrity Events</div>
-          <div className="text-2xl font-extrabold text-rose-600 mt-1">{analytics?.integritySummary?.totalFlaggedStudents || 3}</div>
-          <div className="text-[10px] text-rose-700 font-medium mt-0.5">1 Auto-submit</div>
+          <div className="text-2xl font-extrabold text-rose-600 mt-1">{analytics?.integritySummary?.totalFlaggedStudents ?? 0}</div>
+          <div className="text-[10px] text-rose-700 font-medium mt-0.5">{analytics?.integritySummary?.totalFlaggedStudents ? 'Flagged Attempts' : 'Clean Session'}</div>
         </div>
       </div>
 
