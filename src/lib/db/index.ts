@@ -91,22 +91,33 @@ class DatabaseStore {
   }
 
   private async initMongo(uri: string): Promise<void> {
-    const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5000 });
-    await client.connect();
-    this.mongoCollection = client.db(process.env.MONGODB_DB || 'quizsom').collection<DatabaseSchema>('workspace');
-    const stored = await this.mongoCollection.findOne({ _id: 'primary' } as any);
-    if (stored) {
-      const { _id, ...workspace } = stored as DatabaseSchema & { _id?: unknown };
-      this.data = workspace;
-    } else if (fs.existsSync(DB_FILE)) {
-      this.data = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')) as DatabaseSchema;
-      await this.persistMongo();
-    } else {
-      this.data = this.getDefaultState();
-      await this.persistMongo();
+    try {
+      const client = new MongoClient(uri, { serverSelectionTimeoutMS: 3000 });
+      await client.connect();
+      this.mongoCollection = client.db(process.env.MONGODB_DB || 'quizsom').collection<DatabaseSchema>('workspace');
+      const stored = await this.mongoCollection.findOne({ _id: 'primary' } as any);
+      if (stored) {
+        const { _id, ...workspace } = stored as DatabaseSchema & { _id?: unknown };
+        this.data = workspace;
+      } else if (fs.existsSync(DB_FILE)) {
+        this.data = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')) as DatabaseSchema;
+        await this.persistMongo();
+      } else {
+        this.data = this.getDefaultState();
+        await this.persistMongo();
+      }
+      this.isInitialized = true;
+      console.log('[QuizSom] MongoDB persistence connected.');
+    } catch (err: any) {
+      console.warn('[QuizSom] MongoDB connection warning, falling back to local file storage:', err.message);
+      this.mongoCollection = null;
+      if (fs.existsSync(DB_FILE)) {
+        this.data = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')) as DatabaseSchema;
+      } else {
+        this.data = this.getDefaultState();
+      }
+      this.isInitialized = true;
     }
-    this.isInitialized = true;
-    console.log('[QuizSom] MongoDB persistence connected.');
   }
 
   private async persistMongo() {
