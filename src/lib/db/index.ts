@@ -315,7 +315,17 @@ class DatabaseStore {
     return true;
   }
 
-  createRoomForAssessment(assessmentId: string, teacherId: string, customCode?: string): LiveRoom {
+  createRoomForAssessment(
+    assessmentId: string,
+    teacherId: string,
+    customCode?: string,
+    playgroundMeta?: {
+      assessmentType?: 'FACULTY_EXAM' | 'PLAYGROUND';
+      creatorRole?: 'FACULTY' | 'STUDENT';
+      creatorStudentId?: string;
+      creatorStudentName?: string;
+    }
+  ): LiveRoom {
     // Generate clean 6-character room code (avoiding ambiguous 0, O, 1, I, 5, S)
     const charset = '2346789ABCDEFGHJKLMNPQRTUVWXYZ';
     let code = customCode || '';
@@ -332,12 +342,103 @@ class DatabaseStore {
       teacherId,
       status: 'ACTIVE',
       participantCount: 0,
+      assessmentType: playgroundMeta?.assessmentType || 'FACULTY_EXAM',
+      creatorRole: playgroundMeta?.creatorRole || 'FACULTY',
+      creatorStudentId: playgroundMeta?.creatorStudentId,
+      creatorStudentName: playgroundMeta?.creatorStudentName,
       createdAt: new Date().toISOString(),
     };
 
     this.data.rooms.push(newRoom);
     this.save();
     return newRoom;
+  }
+
+  // --- Playground Methods ---
+  getPlaygroundRooms(studentId: string): {
+    room: LiveRoom;
+    assessment?: Assessment;
+    isCreator: boolean;
+    myAttempt?: ExamAttempt;
+    totalAttempts: number;
+  }[] {
+    const studentAttempts = this.data.attempts.filter((a) => a.studentId === studentId);
+    const attemptedRoomIds = new Set(studentAttempts.map((a) => a.roomId));
+
+    const playgroundRooms = this.data.rooms.filter(
+      (r) =>
+        r.assessmentType === 'PLAYGROUND' &&
+        (r.creatorStudentId === studentId || attemptedRoomIds.has(r.id) || r.teacherId === studentId)
+    );
+
+    return playgroundRooms.map((room) => {
+      const assessment = this.getAssessmentById(room.assessmentId);
+      const attempts = this.getAttemptsByRoom(room.id);
+      const myAttempt = studentAttempts.find((a) => a.roomId === room.id);
+      return {
+        room,
+        assessment,
+        isCreator: room.creatorStudentId === studentId || room.teacherId === studentId,
+        myAttempt,
+        totalAttempts: attempts.length,
+      };
+    });
+  }
+
+  getPlaygroundLeaderboard(roomCode: string): {
+    room?: LiveRoom;
+    assessment?: Assessment;
+    leaderboard: {
+      rank: number;
+      studentId: string;
+      studentName: string;
+      studentRollNo: string;
+      score: number;
+      percentageScore: number;
+      correctCount: number;
+      incorrectCount: number;
+      unansweredCount: number;
+      totalQuestions: number;
+      completionDurationSeconds: number;
+      status: string;
+      submittedAt: string;
+    }[];
+  } {
+    const room = this.getRoomByCode(roomCode);
+    if (!room) return { leaderboard: [] };
+
+    const assessment = this.getAssessmentById(room.assessmentId);
+    const attempts = this.getAttemptsByRoom(room.id);
+
+    // Sort by score descending, then completion duration ascending
+    const sortedAttempts = [...attempts].sort((a, b) => {
+      if ((b.score ?? 0) !== (a.score ?? 0)) {
+        return (b.score ?? 0) - (a.score ?? 0);
+      }
+      return (a.completionDurationSeconds ?? 99999) - (b.completionDurationSeconds ?? 99999);
+    });
+
+    const leaderboard = sortedAttempts.map((att, idx) => ({
+      rank: idx + 1,
+      studentId: att.studentId,
+      studentName: att.studentName || 'Student Peer',
+      studentRollNo: att.studentRollNo || '',
+      score: att.score ?? 0,
+      percentageScore: att.percentageScore ?? 0,
+      correctCount: att.correctCount ?? 0,
+      incorrectCount: att.incorrectCount ?? 0,
+      unansweredCount: att.unansweredCount ?? 0,
+      totalQuestions: att.totalQuestions || assessment?.questionIds.length || 0,
+      completionDurationSeconds: att.completionDurationSeconds ?? 0,
+      status: att.status,
+      submittedAt: att.submittedAt || att.startedAt,
+    }));
+
+    return {
+      room,
+      assessment,
+      leaderboard,
+    };
   }
 
   // --- Attempts & Integrity ---

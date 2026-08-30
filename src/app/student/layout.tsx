@@ -11,6 +11,7 @@ import {
   LogOut,
   MessageSquareText,
   UserRound,
+  Trophy,
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useAuth } from '@/components/AuthProvider';
@@ -18,6 +19,7 @@ import { useAuth } from '@/components/AuthProvider';
 const links = [
   { label: 'Overview', href: '/student', icon: LayoutDashboard },
   { label: 'Study Materials', href: '/student/materials', icon: BookOpen },
+  { label: 'Playground', href: '/student/playground', icon: Trophy },
   { label: 'Study chat', href: '/student/chat', icon: MessageSquareText },
   { label: 'Past quizzes', href: '/student/history', icon: History },
 ];

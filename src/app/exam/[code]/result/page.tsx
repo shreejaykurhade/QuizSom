@@ -100,13 +100,23 @@ export default function StudentResultReviewPage() {
         </div>
 
         <div className="flex items-center gap-2.5">
-          <Link
-            href={`/exam/${code}/leaderboard`}
-            className="btn-secondary py-2 px-3 text-xs font-bold flex items-center gap-1.5"
-          >
-            <Award className="w-3.5 h-3.5 text-blue-600" />
-            Class Leaderboard
-          </Link>
+          {assessment?.assessmentType === 'PLAYGROUND' ? (
+            <Link
+              href={`/student/playground/rooms/${code}`}
+              className="btn-secondary py-2 px-3 text-xs font-bold flex items-center gap-1.5 text-purple-700 bg-purple-50 hover:bg-purple-100"
+            >
+              <Award className="w-3.5 h-3.5 text-purple-600" />
+              Playground Leaderboard
+            </Link>
+          ) : (
+            <Link
+              href={`/exam/${code}/leaderboard`}
+              className="btn-secondary py-2 px-3 text-xs font-bold flex items-center gap-1.5"
+            >
+              <Award className="w-3.5 h-3.5 text-blue-600" />
+              Class Leaderboard
+            </Link>
+          )}
           <Link
             href="/student"
             className="btn-primary py-2 px-3.5 text-xs font-bold"

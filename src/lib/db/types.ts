@@ -116,6 +116,10 @@ export interface Assessment {
   questionIds: string[];
   settings: AssessmentSettings;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  assessmentType?: 'FACULTY_EXAM' | 'PLAYGROUND';
+  creatorRole?: 'FACULTY' | 'STUDENT';
+  creatorStudentId?: string;
+  creatorStudentName?: string;
   publishedAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -127,6 +131,10 @@ export interface LiveRoom {
   assessmentId: string;
   teacherId: string;
   status: RoomStatus;
+  assessmentType?: 'FACULTY_EXAM' | 'PLAYGROUND';
+  creatorRole?: 'FACULTY' | 'STUDENT';
+  creatorStudentId?: string;
+  creatorStudentName?: string;
   startedAt?: string;
   endedAt?: string;
   expiresAt?: string;
