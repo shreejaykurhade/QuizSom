@@ -99,7 +99,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Right Column: 4K Ultra-HD 3D Hero Showcase Image */}
+          {/* Right Column: Clean Seamless 4K 3D Hero Showcase Image */}
           <div className="lg:col-span-6 flex items-center justify-center lg:justify-end relative">
             <div className="relative w-full max-w-xl lg:max-w-2xl">
               <Image
@@ -107,7 +107,7 @@ export default function LandingPage() {
                 alt="QuizSom Assessment Platform 3D Showcase"
                 width={4096}
                 height={2728}
-                className="w-full h-auto object-contain drop-shadow-2xl select-none"
+                className="w-full h-auto object-contain select-none"
                 unoptimized
                 priority
               />
