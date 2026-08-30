@@ -32,6 +32,7 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
+      attempt,
       shouldAutoSubmit,
       violationCount,
       tabSwitchCount: attempt.tabSwitchCount,

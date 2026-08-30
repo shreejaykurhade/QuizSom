@@ -155,7 +155,7 @@ export async function processDocumentBuffer(
 }
 
 export function chunkDocumentText(text: string, totalPages: number): DocumentChunk[] {
-  const markedPages = [...text.matchAll(/\[\[PAGE\s+(\d+)\]\]([\s\S]*?)(?=\[\[PAGE\s+\d+\]\]|$)/g)]
+  const markedPages = Array.from(text.matchAll(/\[\[PAGE\s+(\d+)\]\]([\s\S]*?)(?=\[\[PAGE\s+\d+\]\]|$)/g))
     .map((match) => ({ pageNumber: Number(match[1]), text: match[2].trim() }))
     .filter((page) => page.text.length > 0);
 

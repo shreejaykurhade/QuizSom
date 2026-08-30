@@ -389,29 +389,51 @@ class DatabaseStore {
 
     if (eventType === 'FULLSCREEN_EXIT') {
       attempt.fullscreenViolationCount = (attempt.fullscreenViolationCount || 0) + 1;
-    } else if (eventType === 'TAB_SWITCH' || eventType === 'WINDOW_HIDDEN') {
+    } else if (
+      eventType === 'TAB_SWITCH' ||
+      eventType === 'WINDOW_HIDDEN' ||
+      eventType === 'WINDOW_BLUR'
+    ) {
       attempt.tabSwitchCount = (attempt.tabSwitchCount || 0) + 1;
     }
 
-    // Strike 2 triggers auto-submission
-    const shouldAutoSubmit = attempt.fullscreenViolationCount >= 2;
-    if (shouldAutoSubmit && attempt.status === 'IN_PROGRESS') {
+    const totalViolations =
+      (attempt.fullscreenViolationCount || 0) + (attempt.tabSwitchCount || 0);
+
+    // 2 strikes trigger instant authoritative auto-submission
+    const shouldAutoSubmit = totalViolations >= 2;
+    if (shouldAutoSubmit && (attempt.status === 'IN_PROGRESS' || !attempt.status)) {
       attempt.status = 'AUTO_SUBMITTED';
-      attempt.autoSubmitReason = 'FULLSCREEN_VIOLATION_LIMIT_EXCEEDED';
+      attempt.autoSubmitReason =
+        (attempt.tabSwitchCount || 0) >= 1
+          ? 'TAB_SWITCH_LIMIT_EXCEEDED'
+          : 'FULLSCREEN_VIOLATION_LIMIT_EXCEEDED';
       attempt.submittedAt = new Date().toISOString();
       if (attempt.startedAt) {
         attempt.completionDurationSeconds = Math.max(
           1,
-          Math.floor((new Date(attempt.submittedAt).getTime() - new Date(attempt.startedAt).getTime()) / 1000)
+          Math.floor(
+            (new Date(attempt.submittedAt).getTime() -
+              new Date(attempt.startedAt).getTime()) /
+              1000
+          )
         );
       }
+      this.saveAttempt(attempt);
+
+      // Score the attempt immediately so scores are saved
+      return {
+        attempt: this.scoreAttempt(attempt.id),
+        shouldAutoSubmit: true,
+        violationCount: totalViolations,
+      };
     }
 
     this.saveAttempt(attempt);
     return {
       attempt,
       shouldAutoSubmit,
-      violationCount: attempt.fullscreenViolationCount,
+      violationCount: totalViolations,
     };
   }
 

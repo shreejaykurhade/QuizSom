@@ -24,7 +24,10 @@ export async function POST(
       return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
     }
 
-    const studentId = identity.uid;
+    const studentId =
+      identity.uid === 'usr_faculty_default' && body.studentRollNo
+        ? `usr_${body.studentRollNo.toLowerCase().replace(/[^a-z0-9]/g, '_')}`
+        : identity.uid;
 
     // Check if attempt already exists (Attempt Lock)
     const existingAttempt = db.getAttemptByStudentAndRoom(studentId, room.id);
