@@ -327,7 +327,7 @@ export default function StudentQuizInterfacePage() {
 
       {/* Tab Switch Toast */}
       {tabWarningToast && (
-        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-40 bg-slate-900 text-white text-xs px-4 py-2.5 rounded-xl shadow-modal flex items-center gap-2 border border-slate-700 animate-in fade-in">
+        <div className="fixed left-3 right-3 top-16 z-40 flex items-center justify-center gap-2 rounded-xl border border-slate-700 bg-slate-900 px-4 py-2.5 text-center text-xs text-white shadow-modal animate-in fade-in sm:left-1/2 sm:right-auto sm:-translate-x-1/2">
           <AlertTriangle className="w-4 h-4 text-amber-400" />
           <span>Please remain on the assessment screen. All window blur events are logged.</span>
         </div>

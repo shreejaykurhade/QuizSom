@@ -134,7 +134,7 @@ export default function TeacherResultsAnalyticsPage() {
       </div>
 
       {/* Modern Navigation Tabs */}
-      <div className="border-b border-slate-200 flex items-center gap-6 text-xs font-semibold">
+      <div className="-mx-1 flex items-center gap-6 overflow-x-auto border-b border-slate-200 px-1 text-xs font-semibold whitespace-nowrap">
         {[
           { id: 'overview', label: 'Score Distribution & Insights' },
           { id: 'questions', label: 'Question Accuracy Breakdown' },
