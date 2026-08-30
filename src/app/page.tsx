@@ -257,69 +257,147 @@ export default function LandingPage() {
             </div>
 
             {/* Interactive Preview Content */}
-            <div className="p-6 sm:p-8 bg-white dark:bg-[#0A0A0A] min-h-[360px]">
+            <div className="p-6 sm:p-8 bg-white dark:bg-[#0A0A0A] min-h-[380px]">
               {activePreviewTab === 'teacher' && (
-                <div className="space-y-6">
+                <div className="space-y-5">
+                  {/* Top Bar */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-zinc-800">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-zinc-900 text-blue-700 dark:text-zinc-200 border border-blue-200 dark:border-zinc-800">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
                           CS302
                         </span>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                        <h3 className="text-lg font-extrabold text-slate-900 dark:text-white tracking-tight">
                           Data Structures & Algorithms — IA 01
                         </h3>
+                        <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800 font-bold">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          Evaluation Complete
+                        </span>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-                        Module Evaluation: Trees, Graph Algorithms & Dynamic Programming
+                        Syllabus Units: Trees, Graph Algorithms & Dynamic Programming · 15 Source-Grounded Questions
                       </p>
                     </div>
+
                     <div className="flex items-center gap-4 text-xs font-mono">
-                      <div>
+                      <div className="bg-slate-50 dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800">
                         <div className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-bold">ROOM CODE</div>
-                        <div className="text-base font-bold text-slate-900 dark:text-white">DSA204</div>
+                        <div className="text-base font-extrabold text-slate-900 dark:text-white">DSA204</div>
                       </div>
+                      <div className="bg-slate-50 dark:bg-zinc-900 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-800">
+                        <div className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-bold">SUBMISSIONS</div>
+                        <div className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">46 / 48 (96%)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2-Column Analytics Grid */}
+                  <div className="grid md:grid-cols-12 gap-4">
+                    {/* Left Column: Score Mean & Distribution Histogram */}
+                    <div className="md:col-span-7 p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-200/90 dark:border-zinc-800 space-y-3.5">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="text-[10px] font-mono uppercase font-bold text-slate-400 dark:text-zinc-500">
+                            Class Mean Score
+                          </div>
+                          <div className="flex items-baseline gap-2 mt-0.5">
+                            <span className="text-3xl font-extrabold font-mono text-slate-900 dark:text-white">
+                              78.4%
+                            </span>
+                            <span className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                              +5.2% vs Pre-Test
+                            </span>
+                          </div>
+                        </div>
+                        <div className="text-right text-xs font-mono text-slate-500 dark:text-zinc-400">
+                          <div>Median: <strong>80%</strong></div>
+                          <div className="text-[10px] text-slate-400">Top: 98% · Low: 42%</div>
+                        </div>
+                      </div>
+
+                      {/* Visual Score Distribution Bar */}
+                      <div className="space-y-1.5 pt-1">
+                        <div className="flex justify-between text-[11px] font-mono text-slate-500 dark:text-zinc-400">
+                          <span>Grade Distribution</span>
+                          <span>46 Total Examinees</span>
+                        </div>
+                        <div className="h-3 w-full rounded-full bg-slate-200 dark:bg-zinc-800 flex overflow-hidden p-0.5 gap-0.5">
+                          <div className="bg-emerald-500 rounded-l-full h-full" style={{ width: '30%' }} title="90-100% (14 students)" />
+                          <div className="bg-blue-500 h-full" style={{ width: '48%' }} title="75-89% (22 students)" />
+                          <div className="bg-amber-400 h-full" style={{ width: '17%' }} title="60-74% (8 students)" />
+                          <div className="bg-rose-500 rounded-r-full h-full" style={{ width: '5%' }} title="<60% (2 students)" />
+                        </div>
+                        <div className="grid grid-cols-4 gap-1 text-[10px] font-mono text-slate-500 dark:text-zinc-400 pt-1 text-center">
+                          <div><span className="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-1" />90-100% (14)</div>
+                          <div><span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />75-89% (22)</div>
+                          <div><span className="inline-block w-2 h-2 rounded-full bg-amber-400 mr-1" />60-74% (8)</div>
+                          <div><span className="inline-block w-2 h-2 rounded-full bg-rose-500 mr-1" />&lt;60% (2)</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Column: Cognitive Friction & Mastery Breakdown */}
+                    <div className="md:col-span-5 p-4 sm:p-5 rounded-2xl bg-slate-50/70 dark:bg-zinc-900/60 border border-slate-200/90 dark:border-zinc-800 flex flex-col justify-between space-y-3">
                       <div>
-                        <div className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-bold">EXAMINEES</div>
-                        <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">46 Submissions</div>
+                        <div className="text-[10px] font-mono uppercase font-bold text-slate-400 dark:text-zinc-500 mb-2">
+                          Concept Mastery & Friction
+                        </div>
+                        <div className="space-y-2 text-xs">
+                          <div>
+                            <div className="flex justify-between font-mono text-[11px] mb-1">
+                              <span className="text-slate-800 dark:text-zinc-200 font-semibold truncate">Binary Search Trees & AVL</span>
+                              <span className="text-emerald-600 font-bold">92%</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden">
+                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: '92%' }} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between font-mono text-[11px] mb-1">
+                              <span className="text-slate-800 dark:text-zinc-200 font-semibold truncate">Dynamic Programming</span>
+                              <span className="text-blue-600 font-bold">80%</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden">
+                              <div className="h-full bg-blue-500 rounded-full" style={{ width: '80%' }} />
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex justify-between font-mono text-[11px] mb-1">
+                              <span className="text-amber-800 dark:text-amber-300 font-bold truncate">Graph Topological Sort</span>
+                              <span className="text-amber-600 font-bold">54% ⚠️</span>
+                            </div>
+                            <div className="h-1.5 w-full rounded-full bg-slate-200 dark:bg-zinc-800 overflow-hidden">
+                              <div className="h-full bg-amber-500 rounded-full" style={{ width: '54%' }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-[11px] font-mono text-slate-500 dark:text-zinc-400 pt-1 border-t border-slate-200/80 dark:border-zinc-800 flex items-center justify-between">
+                        <span>Integrity: <strong>2 Logged</strong></span>
+                        <span className="text-amber-600 font-bold">1 Auto-submit</span>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
-                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Class Average</div>
-                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">78%</div>
-                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">+5% vs Pre-Test</div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
-                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Median Score</div>
-                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">80%</div>
-                      <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">Top: 98% · Min: 42%</div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
-                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Turnout</div>
-                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">46 / 48</div>
-                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">96% Completion</div>
-                    </div>
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
-                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Integrity Events</div>
-                      <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">2 Logged</div>
-                      <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">1 Tab Switch Warning</div>
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-black border border-blue-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                  {/* AI Insight Footer */}
+                  <div className="p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2.5">
                       <div className="w-4 h-4 relative shrink-0">
                         <Image src="/gemini-star.png" alt="Gemini" width={16} height={16} className="object-contain" unoptimized />
                       </div>
-                      <span className="text-slate-700 dark:text-zinc-300">
-                        <strong className="text-slate-900 dark:text-white">AI Pedagogical Insights:</strong> 82% of students mastered Binary Search Trees & Heaps; 34% cognitive friction detected on Graph Topological Sort algorithms.
+                      <span className="text-slate-700 dark:text-zinc-300 leading-snug">
+                        <strong className="text-slate-900 dark:text-white">AI Pedagogical Analysis:</strong> Strong grasp on BST balancing; 34% friction detected in cycle detection. Recommended: review Kahn&apos;s algorithm.
                       </span>
                     </div>
-                    <Link href="/auth?role=faculty&next=%2Fteacher%2Fdashboard" className="text-blue-600 dark:text-zinc-200 font-bold hover:underline shrink-0 ml-4">
-                      Open Full Dashboard →
+                    <Link
+                      href="/auth?role=faculty&next=%2Fteacher%2Fdashboard"
+                      className="text-blue-700 dark:text-blue-400 font-bold hover:underline shrink-0 sm:ml-4 text-xs font-mono"
+                    >
+                      Open Live Dashboard →
                     </Link>
                   </div>
                 </div>
