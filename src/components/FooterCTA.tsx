@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import Logo from "@/components/Logo";
@@ -16,8 +16,14 @@ import {
   GraduationCap,
 } from "lucide-react";
 import { TextHoverEffect } from "@/components/ui/hover-footer";
+import { useAuth } from "@/components/AuthProvider";
+import { AuthDialog } from "@/components/AuthModal";
 
 export default function FooterCTA() {
+  const { user } = useAuth();
+  const [facultyAuthOpen, setFacultyAuthOpen] = useState(false);
+  const [studentAuthOpen, setStudentAuthOpen] = useState(false);
+
   // Footer link data for QuizSom
   const footerLinks = [
     {
@@ -89,20 +95,57 @@ export default function FooterCTA() {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
-            <Link
-              href="/teacher/dashboard"
-              className="px-6 py-3.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-100 font-bold text-sm transition-all flex items-center gap-2 shadow-md hover:shadow-xl hover:-translate-y-0.5"
-            >
-              <span>Launch Faculty Portal</span>
-              <ArrowRight className="w-4 h-4 text-white dark:text-black" />
-            </Link>
-            <Link
-              href="/student"
-              className="px-6 py-3.5 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-semibold text-sm border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-xs hover:-translate-y-0.5"
-            >
-              <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>Student Exam Portal</span>
-            </Link>
+            {/* Faculty Portal Button with Auth Layer */}
+            {user ? (
+              <Link
+                href="/teacher/dashboard"
+                className="px-6 py-3.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-100 font-bold text-sm transition-all flex items-center gap-2 shadow-md hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+              >
+                <span>Launch Faculty Portal</span>
+                <ArrowRight className="w-4 h-4 text-white dark:text-black" />
+              </Link>
+            ) : (
+              <AuthDialog
+                initialRole="faculty"
+                open={facultyAuthOpen}
+                onOpenChange={setFacultyAuthOpen}
+                trigger={
+                  <button
+                    type="button"
+                    className="px-6 py-3.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-100 font-bold text-sm transition-all flex items-center gap-2 shadow-md hover:shadow-xl hover:-translate-y-0.5 cursor-pointer"
+                  >
+                    <span>Launch Faculty Portal</span>
+                    <ArrowRight className="w-4 h-4 text-white dark:text-black" />
+                  </button>
+                }
+              />
+            )}
+
+            {/* Student Exam Portal Button with Auth Layer */}
+            {user ? (
+              <Link
+                href="/student"
+                className="px-6 py-3.5 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-semibold text-sm border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-xs hover:-translate-y-0.5 cursor-pointer"
+              >
+                <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span>Student Exam Portal</span>
+              </Link>
+            ) : (
+              <AuthDialog
+                initialRole="student"
+                open={studentAuthOpen}
+                onOpenChange={setStudentAuthOpen}
+                trigger={
+                  <button
+                    type="button"
+                    className="px-6 py-3.5 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-semibold text-sm border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-2 shadow-xs hover:-translate-y-0.5 cursor-pointer"
+                  >
+                    <GraduationCap className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                    <span>Student Exam Portal</span>
+                  </button>
+                }
+              />
+            )}
           </div>
         </div>
 

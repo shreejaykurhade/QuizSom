@@ -72,67 +72,49 @@ export default function StudentPortalPage() {
         </button>
       </div>
 
-      {/* Hero: Focused Room Code Access */}
-      <section className="relative overflow-hidden rounded-3xl bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-6 sm:p-9 text-white shadow-xl border border-slate-800">
-        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 rounded-full bg-blue-600/15 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -mb-8 -ml-8 w-64 h-64 rounded-full bg-emerald-600/15 blur-3xl pointer-events-none" />
-
-        <div className="relative z-10 max-w-2xl mx-auto text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-400/30 text-blue-400 text-[11px] font-mono font-bold uppercase tracking-wider">
-            <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
-            <span>Instant Exam &amp; Arena Entry</span>
+      {/* Minimal & Professional Room Access Section */}
+      <section className="rounded-2xl border border-slate-200/90 bg-white p-6 sm:p-7 shadow-xs">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-blue-600" />
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight">
+                Join Assessment Room
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-lg">
+              Enter your 6-character room code to access proctored faculty exams or student peer battle rooms.
+            </p>
           </div>
 
-          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white">
-            Enter Room Code
-          </h2>
-
-          <p className="text-xs sm:text-sm text-slate-300 max-w-lg mx-auto leading-relaxed">
-            Enter the 6-character code shared by your professor or peer room creator to jump straight into your proctored assessment or study battle.
-          </p>
-
-          {/* Large Hero Room Code Form */}
-          <form onSubmit={submit} className="pt-2 max-w-md mx-auto">
-            <div className="flex flex-col sm:flex-row items-center gap-3">
-              <div className="relative w-full">
-                <input
-                  type="text"
-                  maxLength={6}
-                  value={code}
-                  onChange={(event) =>
-                    setCode(
-                      event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
-                    )
-                  }
-                  autoFocus
-                  className="w-full h-14 rounded-2xl bg-slate-800/90 border-2 border-slate-700 focus:border-blue-500 text-white px-4 text-center font-mono text-2xl sm:text-3xl font-extrabold tracking-[0.3em] uppercase placeholder:tracking-normal placeholder:text-slate-500 placeholder:text-sm transition-all shadow-inner outline-none"
-                  placeholder="e.g. CS301A"
-                />
-                {code.length > 0 && (
-                  <span className="absolute right-3.5 top-1/2 -translate-y-1/2 font-mono text-xs font-bold text-slate-400">
-                    {code.length}/6
-                  </span>
-                )}
-              </div>
-
-              <button
-                type="submit"
-                disabled={!/^[A-Z0-9]{6}$/.test(code)}
-                className="w-full sm:w-auto h-14 px-7 rounded-2xl bg-blue-600 hover:bg-blue-500 active:bg-blue-700 disabled:bg-slate-800 disabled:text-slate-500 text-white font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-blue-500/25 shrink-0 cursor-pointer disabled:cursor-not-allowed"
-              >
-                <span>Join Room</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
+          <form onSubmit={submit} className="flex items-center gap-2.5 w-full lg:w-auto">
+            <div className="relative flex-1 lg:w-60">
+              <input
+                type="text"
+                maxLength={6}
+                value={code}
+                onChange={(event) =>
+                  setCode(
+                    event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+                  )
+                }
+                className="w-full h-11 rounded-xl border-2 border-slate-900 dark:border-white bg-white px-4 text-center font-mono text-base font-bold tracking-[0.25em] text-slate-900 dark:text-white placeholder:text-slate-400 placeholder:tracking-normal placeholder:font-sans placeholder:text-xs focus:ring-2 focus:ring-slate-900/20 focus:outline-none transition-all"
+                placeholder="Enter 6-char code"
+              />
             </div>
-
-            {/* Quick Security Indicators */}
-            <div className="flex items-center justify-center gap-4 pt-3 text-[11px] font-mono text-slate-400">
-              <span className="flex items-center gap-1">🛡️ 2-Strike Proctoring</span>
-              <span>·</span>
-              <span className="flex items-center gap-1">⏱️ Server Synced</span>
-              <span>·</span>
-              <span className="flex items-center gap-1">🏆 Instant Results</span>
-            </div>
+            <button
+              type="submit"
+              disabled={!/^[A-Z0-9]{6}$/.test(code)}
+              className="relative overflow-hidden h-11 px-5 rounded-xl border-2 border-slate-900 dark:border-white bg-white hover:bg-slate-50 text-slate-950 dark:text-white text-xs font-extrabold flex items-center justify-center gap-1.5 transition-all shrink-0 cursor-pointer disabled:cursor-not-allowed shadow-xs group"
+            >
+              {/* Richer Mesh gradient background with darker presence */}
+              <div
+                className="absolute inset-0 pointer-events-none opacity-60 dark:opacity-50 bg-cover bg-center transition-opacity group-hover:opacity-80 group-disabled:opacity-40"
+                style={{ backgroundImage: 'url(/gemini-mesh-gradient.png)' }}
+              />
+              <span className="relative z-10 text-slate-950 dark:text-white font-extrabold">Join Room</span>
+              <ArrowRight className="relative z-10 w-3.5 h-3.5 text-slate-950 dark:text-white stroke-[2.5]" />
+            </button>
           </form>
         </div>
       </section>

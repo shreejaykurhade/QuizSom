@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, useSpring } from 'framer-motion';
 import { Card } from '@/components/ui/card';
@@ -13,9 +13,13 @@ import {
   BookOpen,
   FileUp,
 } from 'lucide-react';
+import { useAuth } from '@/components/AuthProvider';
+import { AuthDialog } from '@/components/AuthModal';
 
 export function AboutBento() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const [studentAuthOpen, setStudentAuthOpen] = useState(false);
 
   // Track scroll progress across the Bento section for non-looping smooth interactive rotation
   const { scrollYProgress } = useScroll({
@@ -127,13 +131,30 @@ export function AboutBento() {
                 <FileUp className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Upload PDFs · Instant Codes · Live Podiums</span>
               </div>
-              <Link
-                href="/student/playground"
-                className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs hover:shadow shrink-0"
-              >
-                <span>Launch Playground</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
+              {user ? (
+                <Link
+                  href="/student/playground"
+                  className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs hover:shadow shrink-0 cursor-pointer"
+                >
+                  <span>Launch Playground</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              ) : (
+                <AuthDialog
+                  initialRole="student"
+                  open={studentAuthOpen}
+                  onOpenChange={setStudentAuthOpen}
+                  trigger={
+                    <button
+                      type="button"
+                      className="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-zinc-100 text-white dark:text-slate-950 font-bold text-xs transition-all flex items-center gap-1.5 shadow-xs hover:shadow shrink-0 cursor-pointer"
+                    >
+                      <span>Launch Playground</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  }
+                />
+              )}
             </div>
           </Card>
 
