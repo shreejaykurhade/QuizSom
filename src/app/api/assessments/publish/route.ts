@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Assessment, Question } from '@/lib/db/types';
+import { requireFirebaseUser } from '@/lib/auth/server';
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await requireFirebaseUser(req);
     const body = await req.json();
     const {
-      courseId = 'course_dbms_301',
-      teacherId = 'user_prof_arvind',
+      courseId = `course_${user.uid}`,
       title,
       moduleName,
       description,
@@ -16,6 +17,11 @@ export async function POST(req: NextRequest) {
       settings,
       customRoomCode,
     } = body;
+    const teacherId = user.uid;
+
+    if (materialDocumentIds.some((id: string) => db.getDocumentById(id)?.ownerId !== teacherId)) {
+      return NextResponse.json({ error: 'You can only publish assessments from your own uploaded material' }, { status: 403 });
+    }
 
     if (!title || questions.length === 0) {
       return NextResponse.json(
@@ -75,6 +81,7 @@ export async function POST(req: NextRequest) {
       room: liveRoom,
     });
   } catch (err: any) {
+    if (err.message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
     console.error('Publish assessment error:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to publish assessment' },

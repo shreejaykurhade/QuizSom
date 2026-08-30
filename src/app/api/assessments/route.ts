@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireFirebaseUser } from '@/lib/auth/server';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
   try {
-    const url = new URL(req.url);
-    const courseId = url.searchParams.get('courseId') || undefined;
-
-    const assessments = db.getAssessments(courseId);
+    const user = await requireFirebaseUser(req);
+    const assessments = db.getAssessments().filter(assessment => assessment.teacherId === user.uid);
     const courses = db.getCourses();
     const courseMap = new Map(courses.map((c) => [c.id, c]));
 
@@ -45,6 +44,7 @@ export async function GET(req: NextRequest) {
       assessments: enrichedAssessments,
     });
   } catch (err: any) {
+    if (err.message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
     console.error('Assessments fetch error:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to fetch assessments' },

@@ -13,6 +13,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { DocumentMaterial } from '@/lib/db/types';
+import { apiFetch } from '@/lib/auth/apiFetch';
 
 export default function TeacherMaterialsPage() {
   const [materials, setMaterials] = useState<DocumentMaterial[]>([]);
@@ -21,7 +22,7 @@ export default function TeacherMaterialsPage() {
   useEffect(() => {
     async function loadMaterials() {
       try {
-        const res = await fetch('/api/materials');
+        const res = await apiFetch('/api/materials');
         const data = await res.json();
         if (data.documents) {
           setMaterials(data.documents);
@@ -40,10 +41,10 @@ export default function TeacherMaterialsPage() {
     setIsUploading(true);
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('courseId', 'course_dbms_301');
+    formData.append('courseId', 'course_personal');
 
     try {
-      const res = await fetch('/api/materials/upload', {
+      const res = await apiFetch('/api/materials/upload', {
         method: 'POST',
         body: formData,
       });
@@ -79,7 +80,7 @@ export default function TeacherMaterialsPage() {
           {isUploading ? 'Chunking & Indexing...' : 'Upload New Syllabus'}
           <input
             type="file"
-            accept=".pdf,.docx,.txt"
+            accept=".pdf,.pptx,.docx,.txt,.md"
             onChange={handleUpload}
             disabled={isUploading}
             className="hidden"

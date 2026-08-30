@@ -27,6 +27,7 @@ export interface DocumentChunk {
   documentId: string;
   chunkIndex: number;
   pageNumber: number;
+  sourceLabel?: string;
   sectionTitle?: string;
   content: string;
   tokenEstimate: number;
@@ -34,6 +35,7 @@ export interface DocumentChunk {
 
 export interface DocumentMaterial {
   id: string;
+  ownerId?: string;
   courseId: string;
   title: string;
   fileName: string;

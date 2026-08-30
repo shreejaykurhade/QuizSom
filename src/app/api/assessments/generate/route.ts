@@ -3,14 +3,16 @@ import { db } from '@/lib/db';
 import { geminiEngine } from '@/lib/gemini/client';
 import { DocumentMaterial } from '@/lib/db/types';
 import { cleanPdfText } from '@/lib/rag/documentProcessor';
+import { requireFirebaseUser } from '@/lib/auth/server';
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await requireFirebaseUser(req);
     const body = await req.json();
     const {
       documentId,
       documentIds,
-      courseId = 'course_dbms_301',
+      courseId = `course_${user.uid}`,
       assessmentTitle = 'Module Internal Assessment',
       totalQuestions = 15,
       difficulty = 'mixed',
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest) {
     const documents: DocumentMaterial[] = [];
     for (const id of ids) {
       const doc = db.getDocumentById(id);
-      if (doc) {
+      if (doc && doc.ownerId === user.uid) {
         // Re-clean the stored rawText and chunks before sending to Gemini
         const cleanedDoc: DocumentMaterial = {
           ...doc,

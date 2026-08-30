@@ -1,16 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireFirebaseUser } from '@/lib/auth/server';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await requireFirebaseUser(req);
     const { id } = params;
     const assessment = db.getAssessmentById(id);
     if (!assessment) {
       return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
     }
+    if (assessment.teacherId !== user.uid) return NextResponse.json({ error: 'Not allowed to view another faculty member’s analytics' }, { status: 403 });
 
     const course = db.getCourseById(assessment.courseId);
     const analytics = db.getAssessmentAnalytics(id);
@@ -49,6 +52,7 @@ export async function GET(
       integrityAuditList,
     });
   } catch (err: any) {
+    if (err.message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
     console.error('Analytics error:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to fetch assessment analytics' },

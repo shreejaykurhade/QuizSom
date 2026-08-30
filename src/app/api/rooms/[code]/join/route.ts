@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { ExamAttempt } from '@/lib/db/types';
+import { requireFirebaseUser } from '@/lib/auth/server';
 
 export async function POST(
   req: NextRequest,
@@ -8,12 +9,10 @@ export async function POST(
 ) {
   try {
     const { code } = params;
+    const identity = await requireFirebaseUser(req);
     const body = await req.json();
-    const { studentName, studentRollNo, studentId: customStudentId } = body;
-
-    if (!studentName || studentName.trim().length === 0) {
-      return NextResponse.json({ error: 'Student name is required' }, { status: 400 });
-    }
+    const studentName = identity.name;
+    const studentRollNo = String(body.studentRollNo || identity.email || identity.uid);
 
     const room = db.getRoomByCode(code);
     if (!room) {
@@ -25,7 +24,7 @@ export async function POST(
       return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
     }
 
-    const studentId = customStudentId || `std_${studentRollNo ? studentRollNo.trim().toUpperCase() : studentName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+    const studentId = identity.uid;
 
     // Check if attempt already exists (Attempt Lock)
     const existingAttempt = db.getAttemptByStudentAndRoom(studentId, room.id);
@@ -109,6 +108,7 @@ export async function POST(
       isResumed: false,
     });
   } catch (err: any) {
+    if (err.message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
     console.error('Student join error:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to join assessment room' },

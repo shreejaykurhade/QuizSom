@@ -14,16 +14,6 @@ import {
   TopicPerformanceStat,
   QuestionAccuracyStat,
 } from './types';
-import {
-  SEED_USERS,
-  SEED_COURSES,
-  SEED_DOCUMENT,
-  SEED_QUESTIONS,
-  SEED_ASSESSMENT,
-  SEED_ROOM,
-  SEED_ROOM_ALT,
-  generateSeedAttempts,
-} from './seed-data';
 
 interface DatabaseSchema {
   users: User[];
@@ -51,13 +41,7 @@ class DatabaseStore {
 
   private getDefaultState(): DatabaseSchema {
     return {
-      users: [...SEED_USERS],
-      courses: [...SEED_COURSES],
-      documents: [{ ...SEED_DOCUMENT }],
-      questions: [...SEED_QUESTIONS],
-      assessments: [{ ...SEED_ASSESSMENT }],
-      rooms: [{ ...SEED_ROOM }, { ...SEED_ROOM_ALT }],
-      attempts: generateSeedAttempts(),
+      users: [], courses: [], documents: [], questions: [], assessments: [], rooms: [], attempts: [],
       integrityEvents: [],
       lastInitialized: new Date().toISOString(),
     };
@@ -71,17 +55,8 @@ class DatabaseStore {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
 
-      if (fs.existsSync(DB_FILE)) {
-        const fileContent = fs.readFileSync(DB_FILE, 'utf-8');
-        const parsed = JSON.parse(fileContent);
-        if (parsed && Array.isArray(parsed.assessments) && parsed.assessments.length > 0) {
-          this.data = parsed;
-          this.isInitialized = true;
-          return;
-        }
-      }
-
-      // Initialize with rich seed data
+      // Each local start begins with an empty account-scoped workspace. No demo
+      // courses, shared DBMS material, or trial attempts are ever loaded.
       this.data = this.getDefaultState();
       this.save();
       this.isInitialized = true;
@@ -298,6 +273,10 @@ class DatabaseStore {
 
   getAttemptsByRoom(roomId: string): ExamAttempt[] {
     return this.data.attempts.filter((a) => a.roomId === roomId);
+  }
+
+  getAttemptsByStudent(studentId: string): ExamAttempt[] {
+    return this.data.attempts.filter((attempt) => attempt.studentId === studentId);
   }
 
   getAttemptsByAssessment(assessmentId: string): ExamAttempt[] {

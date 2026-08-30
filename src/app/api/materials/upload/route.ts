@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { processDocumentBuffer } from '@/lib/rag/documentProcessor';
+import { requireFirebaseUser } from '@/lib/auth/server';
 
 export async function POST(req: NextRequest) {
   try {
+    const user = await requireFirebaseUser(req);
     const formData = await req.formData();
-    const courseId = (formData.get('courseId') as string) || 'course_dbms_301';
+    const courseId = (formData.get('courseId') as string) || `course_${user.uid}`;
 
     // Retrieve all files from multi-file or folder uploads
     const files = (formData.getAll('files') as File[]).concat(
@@ -29,6 +31,7 @@ export async function POST(req: NextRequest) {
           file.type || 'application/pdf',
           courseId
         );
+        docMaterial.ownerId = user.uid;
 
         db.saveDocument(docMaterial);
         processedDocs.push(docMaterial);
@@ -42,6 +45,7 @@ export async function POST(req: NextRequest) {
       totalUploaded: processedDocs.length,
     });
   } catch (err: any) {
+    if (err.message === 'AUTH_REQUIRED') return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
     console.error('Document upload error:', err);
     return NextResponse.json(
       { error: err.message || 'Failed to process document(s)' },

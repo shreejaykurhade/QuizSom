@@ -32,6 +32,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { Question, DocumentMaterial } from '@/lib/db/types';
+import { apiFetch } from '@/lib/auth/apiFetch';
 
 export default function CreateAssessmentWizard() {
   const router = useRouter();
@@ -88,7 +89,7 @@ export default function CreateAssessmentWizard() {
   useEffect(() => {
     async function fetchMaterials() {
       try {
-        const res = await fetch('/api/materials');
+        const res = await apiFetch('/api/materials');
         const data = await res.json();
         if (data.documents && data.documents.length > 0) {
           setMaterials(data.documents);
@@ -154,13 +155,13 @@ export default function CreateAssessmentWizard() {
     setUploadStatusText(`Uploading and indexing ${files.length} document(s)...`);
 
     const formData = new FormData();
-    formData.append('courseId', 'course_dbms_301');
+    formData.append('courseId', 'course_personal');
     files.forEach((file) => {
       formData.append('files', file);
     });
 
     try {
-      const res = await fetch('/api/materials/upload', {
+      const res = await apiFetch('/api/materials/upload', {
         method: 'POST',
         body: formData,
       });
@@ -246,7 +247,7 @@ export default function CreateAssessmentWizard() {
     }, 4800);
 
     try {
-      const res = await fetch('/api/assessments/generate', {
+      const res = await apiFetch('/api/assessments/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -286,7 +287,7 @@ export default function CreateAssessmentWizard() {
     setIsRegenerating(true);
 
     try {
-      const res = await fetch('/api/assessments/regenerate-question', {
+      const res = await apiFetch('/api/assessments/regenerate-question', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -324,7 +325,7 @@ export default function CreateAssessmentWizard() {
   const handlePublish = async () => {
     setIsPublishing(true);
     try {
-      const res = await fetch('/api/assessments/publish', {
+      const res = await apiFetch('/api/assessments/publish', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

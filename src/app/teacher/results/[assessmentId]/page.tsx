@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { apiFetch } from '@/lib/auth/apiFetch';
 import {
   BarChart3,
   CheckCircle2,
@@ -30,7 +31,7 @@ export default function TeacherResultsAnalyticsPage() {
   useEffect(() => {
     async function loadAnalytics() {
       try {
-        const res = await fetch(`/api/assessments/${assessmentId}/analytics`);
+        const res = await apiFetch(`/api/assessments/${assessmentId}/analytics`);
         const json = await res.json();
         if (json.analytics) {
           setData(json);
