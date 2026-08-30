@@ -145,10 +145,12 @@ ${groundedChunks.slice(0, 25000)}`;
 MATERIAL:
 ${contextText}
 
+${req.topicFocus ? `REMEDIATION FOCUS:\nGenerate questions specifically about "${req.topicFocus}". Use only source blocks that directly support this topic. Vary the concepts and avoid merely repeating one fact.` : ''}
+
 RULES:
 1. Generate exactly ${totalTarget} questions.
 2. Every question and its correct option MUST be explicitly stated in ONE supplied [DOCUMENT | PAGE | SECTION] block. Do NOT use external knowledge or infer an answer.
-3. Distribute questions across ALL chapters/sections in the material evenly.
+3. ${req.topicFocus ? `Keep every question focused on ${req.topicFocus}, while covering different supporting concepts from the material.` : 'Distribute questions across ALL chapters/sections in the material evenly.'}
 4. Write clear, natural academic questions. Do NOT include author names, dates, slide numbers, or URLs in questions.
 5. Each question has exactly 4 options (opt_1 through opt_4). One correct, three plausible distractors from the same text.
 6. Difficulty: ${req.difficulty === 'mixed' ? 'mix of easy, medium, and hard' : req.difficulty}.

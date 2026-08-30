@@ -16,6 +16,8 @@ import {
   Sparkles,
   RefreshCw,
   MinusCircle,
+  Target,
+  Dumbbell,
 } from 'lucide-react';
 
 import { useAuth } from '@/components/AuthProvider';
@@ -28,6 +30,8 @@ export default function StudentResultReviewPage() {
   const [resultData, setResultData] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'correct' | 'incorrect' | 'unanswered'>('all');
   const [isLoading, setIsLoading] = useState(true);
+  const [practiceTopic, setPracticeTopic] = useState('');
+  const [practiceError, setPracticeError] = useState('');
 
   useEffect(() => {
     async function loadResult() {
@@ -87,6 +91,27 @@ export default function StudentResultReviewPage() {
   const scoreMarks = attempt?.score ?? 0;
   const rank = attempt?.rank ?? 1;
   const totalParticipants = attempt?.totalParticipants ?? 1;
+  const remediationTopics = Array.from(new Set(
+    questions.filter((q: any) => !q.isCorrect).map((q: any) => q.topic).filter(Boolean)
+  )) as string[];
+
+  async function startPractice(topic: string) {
+    setPracticeTopic(topic);
+    setPracticeError('');
+    try {
+      const response = await apiFetch('/api/student/practice/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attemptId: attempt.id, topic, totalQuestions: 8 }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not create practice round');
+      window.location.href = `/exam/${data.roomCode}`;
+    } catch (error: any) {
+      setPracticeError(error.message || 'Could not create practice round');
+      setPracticeTopic('');
+    }
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900 pb-16">
@@ -215,6 +240,29 @@ export default function StudentResultReviewPage() {
               </div>
             </div>
           )}
+
+          <div className="rounded-2xl border border-violet-200 bg-violet-50/70 p-5">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-violet-600 p-2 text-white"><Target className="h-5 w-5" /></div>
+              <div>
+                <h2 className="font-bold text-violet-950">Adaptive weak-topic practice</h2>
+                <p className="mt-1 text-xs leading-5 text-violet-900/70">Generate a fresh Battleground round from the same PDFs. Every practice question is source-verified, and the next result will measure whether this topic improved.</p>
+              </div>
+            </div>
+            {remediationTopics.length ? (
+              <div className="mt-4 flex flex-wrap gap-2">
+                {remediationTopics.map((topic) => (
+                  <button key={topic} onClick={() => startPractice(topic)} disabled={Boolean(practiceTopic)} className="inline-flex items-center gap-2 rounded-xl border border-violet-300 bg-white px-3 py-2 text-xs font-bold text-violet-800 transition hover:bg-violet-100 disabled:cursor-wait disabled:opacity-60">
+                    {practiceTopic === topic ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Dumbbell className="h-3.5 w-3.5" />}
+                    {practiceTopic === topic ? `Building ${topic} practice…` : `Practice ${topic}`}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="mt-4 rounded-xl bg-emerald-100 px-3 py-2 text-xs font-bold text-emerald-800">No weak topics detected. You mastered every assessed topic.</p>
+            )}
+            {practiceError && <p className="mt-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-semibold text-rose-700">{practiceError}</p>}
+          </div>
         </div>
 
         {/* Detailed Question Review List */}

@@ -629,8 +629,8 @@ class DatabaseStore {
     });
 
     attempt.performanceSummary = {
-      strongTopics: strongTopics.length > 0 ? strongTopics : ['General Concepts'],
-      weakTopics: weakTopics.length > 0 ? weakTopics : ['Advanced Edge Cases'],
+      strongTopics,
+      weakTopics,
       revisionAdvice: weakTopics.map(
         (t) => `Review textbook sections and module notes concerning ${t}.`
       ),

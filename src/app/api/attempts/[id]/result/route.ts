@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { requireFirebaseUser } from '@/lib/auth/server';
 
 export async function GET(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
   try {
+    const user = await requireFirebaseUser(req);
+    await db.ready();
     const { id } = params;
     const attempt = db.getAttemptById(id);
 
     if (!attempt) {
       return NextResponse.json({ error: 'Attempt not found' }, { status: 404 });
+    }
+    if (attempt.studentId !== user.uid) {
+      return NextResponse.json({ error: 'You cannot view another student’s result' }, { status: 403 });
     }
 
     const assessment = db.getAssessmentById(attempt.assessmentId);
@@ -81,6 +87,8 @@ export async function GET(
         id: assessment.id,
         title: assessment.title,
         moduleName: assessment.moduleName,
+        assessmentType: assessment.assessmentType || 'FACULTY_EXAM',
+        materialDocumentIds: assessment.materialDocumentIds,
         showLeaderboard: assessment.settings.showLeaderboard,
       },
       course: course ? {
