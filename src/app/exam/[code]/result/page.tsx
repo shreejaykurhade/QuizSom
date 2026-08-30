@@ -374,7 +374,7 @@ export default function StudentResultReviewPage() {
                     return (
                       <div
                         key={opt.id}
-                        className={`p-3.5 rounded-xl border flex items-center justify-between ${
+                        className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
                           isCorrectAnswer
                             ? 'border-emerald-300 bg-emerald-50 text-emerald-900 font-bold'
                             : isStudentPick && !isCorrectAnswer
@@ -382,28 +382,30 @@ export default function StudentResultReviewPage() {
                             : 'border-slate-200 bg-slate-50/60 text-slate-800'
                         }`}
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs font-bold">
+                        <div className="flex items-start sm:items-center gap-2 min-w-0">
+                          <span className="font-mono text-xs font-bold shrink-0">
                             {String.fromCharCode(65 + optIdx)}.
                           </span>
-                          <span>{opt.text}</span>
+                          <span className="leading-snug">{opt.text}</span>
                         </div>
 
-                        {isCorrectAnswer && (
-                          <span className="text-[10px] font-mono uppercase bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
-                            Correct Answer
-                          </span>
-                        )}
-                        {isStudentPick && !isCorrectAnswer && (
-                          <span className="text-[10px] font-mono uppercase bg-rose-600 text-white px-2 py-0.5 rounded-full font-bold">
-                            Your Choice
-                          </span>
-                        )}
-                        {isStudentPick && isCorrectAnswer && (
-                          <span className="text-[10px] font-mono uppercase bg-emerald-700 text-white px-2 py-0.5 rounded-full font-bold">
-                            Your Choice ✓
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {isCorrectAnswer && !isStudentPick && (
+                            <span className="text-[10px] font-mono uppercase bg-emerald-600 text-white px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap shadow-xs">
+                              Correct Answer
+                            </span>
+                          )}
+                          {isStudentPick && !isCorrectAnswer && (
+                            <span className="text-[10px] font-mono uppercase bg-rose-600 text-white px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap shadow-xs">
+                              Your Choice
+                            </span>
+                          )}
+                          {isStudentPick && isCorrectAnswer && (
+                            <span className="text-[10px] font-mono uppercase bg-emerald-700 text-white px-2.5 py-0.5 rounded-full font-bold whitespace-nowrap shadow-xs">
+                              Your Choice (Correct) ✓
+                            </span>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
