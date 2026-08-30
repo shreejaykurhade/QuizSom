@@ -21,8 +21,11 @@ import {
   TrendingUp,
 } from 'lucide-react';
 
+import { useAuth } from '@/components/AuthProvider';
+
 export default function StudentResultReviewPage() {
   const params = useParams();
+  const { user } = useAuth();
   const code = (params.code as string)?.toUpperCase();
 
   const [resultData, setResultData] = useState<any>(null);
@@ -113,7 +116,7 @@ export default function StudentResultReviewPage() {
                 {assessment?.title || 'DBMS — Internal Assessment 01'}
               </h1>
               <p className="text-xs text-slate-500 mt-0.5">
-                Examinee: <strong className="text-slate-800">{attempt?.studentName || 'Aarav Sharma'}</strong> ({attempt?.studentRollNo || '2024CS1048'})
+                Examinee: <strong className="text-slate-800">{attempt?.studentName || user?.displayName || user?.email?.split('@')[0] || 'Student Candidate'}</strong> ({attempt?.studentRollNo || (user?.email ? user.email.split('@')[0].toUpperCase() : '2024CS1048')})
               </p>
             </div>
 

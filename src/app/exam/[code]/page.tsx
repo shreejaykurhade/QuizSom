@@ -18,14 +18,17 @@ import {
   Award,
 } from 'lucide-react';
 
+import { useAuth } from '@/components/AuthProvider';
+
 export default function ExamBriefingPage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const code = (params.code as string)?.toUpperCase();
 
   const [roomData, setRoomData] = useState<any>(null);
   const [studentInfo, setStudentInfo] = useState<{ name: string; rollNo: string }>({
-    name: 'Aarav Sharma',
+    name: 'Student Candidate',
     rollNo: '2024CS1048',
   });
   const [acknowledged, setAcknowledged] = useState(false);
@@ -34,12 +37,40 @@ export default function ExamBriefingPage() {
   const [error, setError] = useState('');
 
   useEffect(() => {
+    let studentName = 'Student Candidate';
+    let studentRoll = '2024CS1048';
+
+    if (user) {
+      studentName =
+        user.displayName ||
+        (user.email
+          ? user.email
+              .split('@')[0]
+              .replace(/[._-]/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase())
+          : 'Student Candidate');
+
+      studentRoll = user.email
+        ? user.email.split('@')[0].toUpperCase().slice(0, 10)
+        : `STU-${user.uid.slice(0, 6).toUpperCase()}`;
+    }
+
     const saved = localStorage.getItem('assessly_student');
     if (saved) {
       try {
-        setStudentInfo(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (parsed.name && parsed.name !== 'Aarav Sharma') {
+          studentName = parsed.name;
+        }
+        if (parsed.rollNo && parsed.rollNo !== '2024CS1048') {
+          studentRoll = parsed.rollNo;
+        }
       } catch (e) {}
     }
+
+    const updated = { name: studentName, rollNo: studentRoll };
+    setStudentInfo(updated);
+    localStorage.setItem('assessly_student', JSON.stringify(updated));
 
     async function loadRoom() {
       try {
@@ -58,7 +89,7 @@ export default function ExamBriefingPage() {
       }
     }
     loadRoom();
-  }, [code]);
+  }, [code, user]);
 
   const handleStartExam = async () => {
     if (!acknowledged) return;

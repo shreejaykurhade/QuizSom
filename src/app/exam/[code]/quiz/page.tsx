@@ -16,9 +16,12 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+import { useAuth } from '@/components/AuthProvider';
+
 export default function StudentQuizInterfacePage() {
   const params = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const code = (params.code as string)?.toUpperCase();
 
   const [attemptId, setAttemptId] = useState<string | null>(null);
@@ -49,9 +52,29 @@ export default function StudentQuizInterfacePage() {
     async function initExam() {
       try {
         const studentData = localStorage.getItem('assessly_student');
-        const parsedStudent = studentData
-          ? JSON.parse(studentData)
-          : { name: 'Aarav Sharma', rollNo: '2024CS1048' };
+        let parsedStudent = studentData ? JSON.parse(studentData) : null;
+
+        if (user) {
+          const googleName =
+            user.displayName ||
+            (user.email
+              ? user.email
+                  .split('@')[0]
+                  .replace(/[._-]/g, ' ')
+                  .replace(/\b\w/g, (c) => c.toUpperCase())
+              : 'Student Candidate');
+
+          const googleRoll = user.email
+            ? user.email.split('@')[0].toUpperCase().slice(0, 10)
+            : `STU-${user.uid.slice(0, 6).toUpperCase()}`;
+
+          parsedStudent = {
+            name: parsedStudent?.name && parsedStudent.name !== 'Aarav Sharma' ? parsedStudent.name : googleName,
+            rollNo: parsedStudent?.rollNo && parsedStudent.rollNo !== '2024CS1048' ? parsedStudent.rollNo : googleRoll,
+          };
+        } else if (!parsedStudent) {
+          parsedStudent = { name: 'Student Candidate', rollNo: '2024CS1048' };
+        }
 
         const roomRes = await apiFetch(`/api/rooms/${code}`);
         const roomJson = await roomRes.json();
