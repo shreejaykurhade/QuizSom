@@ -55,8 +55,18 @@ class DatabaseStore {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       }
 
-      // Each local start begins with an empty account-scoped workspace. No demo
-      // courses, shared DBMS material, or trial attempts are ever loaded.
+      // Start empty only when there is no local workspace yet.  Once a faculty
+      // member uploads material it must survive a Next.js restart; access is
+      // still enforced by the material's Firebase UID in the API routes.
+      if (fs.existsSync(DB_FILE)) {
+        const saved = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')) as DatabaseSchema;
+        if (Array.isArray(saved.documents) && Array.isArray(saved.assessments) && Array.isArray(saved.attempts)) {
+          this.data = saved;
+          this.isInitialized = true;
+          return;
+        }
+      }
+
       this.data = this.getDefaultState();
       this.save();
       this.isInitialized = true;

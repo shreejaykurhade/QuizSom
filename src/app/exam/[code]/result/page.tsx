@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { apiFetch } from '@/lib/auth/apiFetch';
+import SourcePagePreview from '@/components/SourcePagePreview';
 import {
   CheckCircle2,
   XCircle,
@@ -33,7 +35,7 @@ export default function StudentResultReviewPage() {
         const savedAttemptId = localStorage.getItem(`assessly_attempt_${code}`);
         const attemptId = savedAttemptId || 'attempt_0';
 
-        const res = await fetch(`/api/attempts/${attemptId}/result`);
+        const res = await apiFetch(`/api/attempts/${attemptId}/result`);
         const data = await res.json();
         if (data.attempt) {
           setResultData(data);
@@ -331,6 +333,7 @@ export default function StudentResultReviewPage() {
                   </div>
                   <span className="text-emerald-700 shrink-0 font-bold text-[10px]">Verified Grounding ✓</span>
                 </div>
+                <SourcePagePreview citation={q.sourceCitation} />
               </div>
             ))}
           </div>

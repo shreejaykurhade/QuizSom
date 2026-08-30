@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { processDocumentBuffer } from '@/lib/rag/documentProcessor';
 import { requireFirebaseUser } from '@/lib/auth/server';
+import fs from 'fs';
+import path from 'path';
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,6 +34,11 @@ export async function POST(req: NextRequest) {
           courseId
         );
         docMaterial.ownerId = user.uid;
+        const uploadDirectory = path.join(process.cwd(), '.data', 'uploads');
+        fs.mkdirSync(uploadDirectory, { recursive: true });
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        docMaterial.storagePath = path.join(uploadDirectory, `${docMaterial.id}-${safeName}`);
+        fs.writeFileSync(docMaterial.storagePath, buffer);
 
         db.saveDocument(docMaterial);
         processedDocs.push(docMaterial);

@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { apiFetch } from '@/lib/auth/apiFetch';
 import {
   Shield,
   Clock,
@@ -42,7 +43,7 @@ export default function ExamBriefingPage() {
 
     async function loadRoom() {
       try {
-        const res = await fetch(`/api/rooms/${code}`);
+        const res = await apiFetch(`/api/rooms/${code}`);
         const data = await res.json();
         if (data.room) {
           setRoomData(data);
@@ -64,7 +65,7 @@ export default function ExamBriefingPage() {
     setIsStarting(true);
 
     try {
-      const res = await fetch(`/api/rooms/${code}/join`, {
+      const res = await apiFetch(`/api/rooms/${code}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

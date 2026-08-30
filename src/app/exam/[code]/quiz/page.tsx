@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Logo from '@/components/Logo';
+import { apiFetch } from '@/lib/auth/apiFetch';
 import {
   Shield,
   Clock,
@@ -52,7 +53,7 @@ export default function StudentQuizInterfacePage() {
           ? JSON.parse(studentData)
           : { name: 'Aarav Sharma', rollNo: '2024CS1048' };
 
-        const roomRes = await fetch(`/api/rooms/${code}`);
+        const roomRes = await apiFetch(`/api/rooms/${code}`);
         const roomJson = await roomRes.json();
 
         if (!roomJson.room) {
@@ -64,7 +65,7 @@ export default function StudentQuizInterfacePage() {
         setAssessment(roomJson.assessment);
         setQuestions(roomJson.questions || []);
 
-        const joinRes = await fetch(`/api/rooms/${code}/join`, {
+        const joinRes = await apiFetch(`/api/rooms/${code}/join`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -141,7 +142,7 @@ export default function StudentQuizInterfacePage() {
 
     if (attemptId) {
       try {
-        await fetch(`/api/attempts/${attemptId}/answer`, {
+        await apiFetch(`/api/attempts/${attemptId}/answer`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -163,7 +164,7 @@ export default function StudentQuizInterfacePage() {
     isExamActive.current = false;
 
     try {
-      await fetch(`/api/attempts/${attemptId}/submit`, {
+      await apiFetch(`/api/attempts/${attemptId}/submit`, {
         method: 'POST',
       });
       router.push(`/exam/${code}/result`);
@@ -177,7 +178,7 @@ export default function StudentQuizInterfacePage() {
     if (!attemptId || !isExamActive.current) return;
     isExamActive.current = false;
     try {
-      await fetch(`/api/attempts/${attemptId}/submit`, { method: 'POST' });
+      await apiFetch(`/api/attempts/${attemptId}/submit`, { method: 'POST' });
     } finally {
       router.push(`/exam/${code}/result`);
     }
@@ -188,7 +189,7 @@ export default function StudentQuizInterfacePage() {
       if (!attemptId || !isExamActive.current) return;
 
       try {
-        const res = await fetch(`/api/attempts/${attemptId}/integrity-event`, {
+        const res = await apiFetch(`/api/attempts/${attemptId}/integrity-event`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

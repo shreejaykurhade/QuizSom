@@ -64,6 +64,10 @@ export async function POST(req: NextRequest) {
       topicFocus,
       moduleName,
     });
+    questions.forEach(question => {
+      const source = documents.find(document => document.title === question.sourceCitation.documentTitle) || documents[0];
+      question.sourceCitation.documentId = source.id;
+    });
 
     return NextResponse.json({
       success: true,

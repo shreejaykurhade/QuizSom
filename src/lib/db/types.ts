@@ -36,6 +36,7 @@ export interface DocumentChunk {
 export interface DocumentMaterial {
   id: string;
   ownerId?: string;
+  storagePath?: string;
   courseId: string;
   title: string;
   fileName: string;

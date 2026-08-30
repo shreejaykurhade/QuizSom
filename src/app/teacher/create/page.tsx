@@ -32,6 +32,7 @@ import {
   Plus,
 } from 'lucide-react';
 import { Question, DocumentMaterial } from '@/lib/db/types';
+import SourcePagePreview from '@/components/SourcePagePreview';
 import { apiFetch } from '@/lib/auth/apiFetch';
 
 export default function CreateAssessmentWizard() {
@@ -1051,6 +1052,7 @@ export default function CreateAssessmentWizard() {
                     <strong className="text-slate-700">Explanation:</strong> {q.explanation}
                   </div>
                 </div>
+                <SourcePagePreview citation={q.sourceCitation} />
               </div>
             ))}
           </div>

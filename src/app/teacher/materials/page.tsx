@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   FileText,
@@ -14,31 +15,47 @@ import {
 } from 'lucide-react';
 import { DocumentMaterial } from '@/lib/db/types';
 import { apiFetch } from '@/lib/auth/apiFetch';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function TeacherMaterialsPage() {
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const [materials, setMaterials] = useState<DocumentMaterial[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadMaterials = useCallback(async () => {
+    try {
+      setError(null);
+      const res = await apiFetch('/api/materials');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Could not load your materials.');
+      setMaterials(data.documents || []);
+    } catch (err) {
+      console.error('Failed to load materials:', err);
+      setError(err instanceof Error ? err.message : 'Could not load your materials.');
+    }
+  }, []);
 
   useEffect(() => {
-    async function loadMaterials() {
-      try {
-        const res = await apiFetch('/api/materials');
-        const data = await res.json();
-        if (data.documents) {
-          setMaterials(data.documents);
-        }
-      } catch (err) {
-        console.error('Failed to load materials:', err);
-      }
+    if (loading) return;
+    if (!user) {
+      router.replace('/auth?role=faculty&next=%2Fteacher%2Fmaterials');
+      return;
     }
-    loadMaterials();
-  }, []);
+    void loadMaterials();
+  }, [loading, user, router, loadMaterials]);
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!user) {
+      router.push('/auth?role=faculty&next=%2Fteacher%2Fmaterials');
+      return;
+    }
 
     setIsUploading(true);
+    setError(null);
     const formData = new FormData();
     formData.append('file', file);
     formData.append('courseId', 'course_personal');
@@ -49,11 +66,11 @@ export default function TeacherMaterialsPage() {
         body: formData,
       });
       const data = await res.json();
-      if (data.document) {
-        setMaterials((prev) => [data.document, ...prev]);
-      }
+      if (!res.ok) throw new Error(data.error || 'Upload failed.');
+      await loadMaterials();
     } catch (err) {
       console.error('Upload failed:', err);
+      setError(err instanceof Error ? err.message : 'Upload failed.');
     } finally {
       setIsUploading(false);
     }
@@ -90,6 +107,16 @@ export default function TeacherMaterialsPage() {
 
       {/* Materials Cards List */}
       <div className="space-y-4">
+        {error && (
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+        {!loading && !error && materials.length === 0 && (
+          <div className="rounded-xl border border-dashed border-[#C8D8E8] bg-[#F8FBFD] p-8 text-center text-sm text-[#6B6B67]">
+            No materials uploaded by this faculty account yet. Upload a PDF or PPT to build your private library.
+          </div>
+        )}
         {materials.map((doc) => (
           <div
             key={doc.id}
