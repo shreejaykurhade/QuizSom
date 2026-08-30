@@ -9,6 +9,7 @@ import Navbar from '@/components/Navbar';
 import FooterCTA from '@/components/FooterCTA';
 import { ContainerScroll } from '@/components/ui/container-scroll-animation';
 import { BentoGridShowcase } from '@/components/ui/bento-product-features';
+import AboutBento from '@/components/ui/about-bento';
 import {
   Card,
   CardContent,
@@ -173,76 +174,8 @@ export default function LandingPage() {
       {/* Subtle Section Divider */}
       <div className="w-full border-t border-slate-200/80 dark:border-zinc-800/80" />
 
-      {/* Academic Portals Dual Box Section */}
-      <section id="portals" className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full scroll-mt-20">
-        {/* Section Header */}
-        <div className="max-w-xl mx-auto text-center mb-6">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/70 dark:bg-zinc-900 border border-slate-300/60 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 text-[11px] font-mono font-semibold uppercase tracking-wider mb-2 shadow-xs">
-            <Sparkles className="w-3 h-3 text-blue-500 dark:text-zinc-300" />
-            Academic Portals
-          </div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-            Select your workspace
-          </h2>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
-            Optimized, focused interfaces designed for faculty and students.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 gap-5 lg:gap-6 max-w-5xl mx-auto">
-          {/* Teacher Portal Box */}
-          <div className="rounded-3xl bg-white dark:bg-[#0A0A0A] border border-slate-200/90 dark:border-zinc-800 p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
-            <div>
-              <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-zinc-900 border border-blue-100 dark:border-zinc-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4 shadow-xs">
-                <BookOpen className="w-5 h-5" />
-              </div>
-              <div className="text-[11px] font-mono font-bold tracking-widest uppercase text-slate-500 dark:text-zinc-400 mb-1.5">
-                FACULTY & EVALUATORS
-              </div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">
-                Teacher Portal
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed mb-6">
-                Upload syllabus PDFs, generate source-grounded questions with Gemini Flash, review QA drafts, launch live rooms, and inspect class integrity reports.
-              </p>
-            </div>
-
-            <Link
-              href="/auth?role=faculty&next=%2Fteacher%2Fdashboard"
-              className="w-full py-3.5 px-6 rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow"
-            >
-              <span>Faculty Sign in</span>
-              <ArrowRight className="w-4 h-4 text-white dark:text-black" />
-            </Link>
-          </div>
-
-          {/* Student Access Box */}
-          <div className="rounded-3xl bg-white dark:bg-[#0A0A0A] border border-slate-200/90 dark:border-zinc-800 p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
-            <div>
-              <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-zinc-900 border border-emerald-100 dark:border-zinc-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-xs">
-                <GraduationCap className="w-5 h-5" />
-              </div>
-              <div className="text-[11px] font-mono font-bold tracking-widest uppercase text-slate-500 dark:text-zinc-400 mb-1.5">
-                STUDENTS & EXAMINEES
-              </div>
-              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">
-                Student Access
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed mb-6">
-                Enter your 6-character room code to join live timed internal assessments, take tests under controlled proctored conditions, and review explanations.
-              </p>
-            </div>
-
-            <Link
-              href="/auth?role=student&next=%2Fstudent"
-              className="w-full py-3.5 px-6 rounded-2xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs hover:border-slate-300 dark:hover:border-zinc-700"
-            >
-              <span>Join with Room Code</span>
-              <ArrowRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Features & Arena Bento Showcase */}
+      <AboutBento />
 
       {/* Subtle Section Divider */}
       <div className="w-full border-t border-slate-200/80 dark:border-zinc-800/80" />
