@@ -4,6 +4,7 @@ import { processDocumentBuffer } from '@/lib/rag/documentProcessor';
 import { requireFirebaseUser } from '@/lib/auth/server';
 import fs from 'fs';
 import path from 'path';
+import { indexDocumentChunks } from '@/lib/rag/embeddings';
 
 export async function POST(req: NextRequest) {
   try {
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
         const arrayBuffer = await file.arrayBuffer();
         const buffer = Buffer.from(arrayBuffer);
 
-        const docMaterial = await processDocumentBuffer(
+        let docMaterial = await processDocumentBuffer(
           buffer,
           file.name,
           file.type || 'application/pdf',
@@ -39,6 +40,7 @@ export async function POST(req: NextRequest) {
         const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
         docMaterial.storagePath = path.join(uploadDirectory, `${docMaterial.id}-${safeName}`);
         fs.writeFileSync(docMaterial.storagePath, buffer);
+        docMaterial = await indexDocumentChunks(docMaterial);
 
         db.saveDocument(docMaterial);
         processedDocs.push(docMaterial);

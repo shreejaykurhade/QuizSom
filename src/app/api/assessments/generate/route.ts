@@ -5,6 +5,7 @@ import { DocumentMaterial } from '@/lib/db/types';
 import { cleanPdfText, processDocumentBuffer } from '@/lib/rag/documentProcessor';
 import { requireFirebaseUser } from '@/lib/auth/server';
 import fs from 'fs';
+import { indexDocumentChunks } from '@/lib/rag/embeddings';
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,6 +53,7 @@ export async function POST(req: NextRequest) {
             storagePath: doc.storagePath,
             uploadedAt: doc.uploadedAt,
           };
+          indexedDoc = await indexDocumentChunks(indexedDoc);
           db.saveDocument(indexedDoc);
         }
         // Re-clean the stored rawText and chunks before sending to Gemini

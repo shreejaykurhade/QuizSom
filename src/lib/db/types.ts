@@ -31,6 +31,10 @@ export interface DocumentChunk {
   sectionTitle?: string;
   content: string;
   tokenEstimate: number;
+  /** Gemini embedding for semantic retrieval; stored with the owner-scoped chunk in MongoDB. */
+  embedding?: number[];
+  embeddingModel?: string;
+  indexedAt?: string;
 }
 
 export interface DocumentMaterial {

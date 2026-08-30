@@ -149,6 +149,8 @@ export async function processDocumentBuffer(
     uploadedAt: new Date().toISOString(),
   };
 
+  docMaterial.chunks = docMaterial.chunks.map((chunk) => ({ ...chunk, documentId: docMaterial.id }));
+
   return docMaterial;
 }
 
