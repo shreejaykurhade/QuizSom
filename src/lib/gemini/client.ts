@@ -129,12 +129,14 @@ export class GeminiAssessmentEngine {
 
     const contextText = docs
       .map((d, idx) => {
-        const cleaned = cleanPdfText(d.rawText);
+        const groundedChunks = (d.chunks || []).map((chunk) =>
+          `[DOCUMENT: ${d.title} | PAGE: ${chunk.pageNumber} | SECTION: ${chunk.sectionTitle || 'Course material'}]\n${chunk.content}`
+        ).join('\n\n');
         return `================================================================================
 DOCUMENT #${idx + 1}: "${d.title}" (${d.pageCount} pages)
 Generate ~${questionsPerDoc} questions from this document
 ================================================================================
-${cleaned.slice(0, 25000)}`;
+${groundedChunks.slice(0, 25000)}`;
       })
       .join('\n\n');
 
@@ -145,12 +147,12 @@ ${contextText}
 
 RULES:
 1. Generate exactly ${totalTarget} questions.
-2. Every question and answer MUST come directly from the text above. Do NOT use external knowledge.
+2. Every question and its correct option MUST be explicitly stated in ONE supplied [DOCUMENT | PAGE | SECTION] block. Do NOT use external knowledge or infer an answer.
 3. Distribute questions across ALL chapters/sections in the material evenly.
 4. Write clear, natural academic questions. Do NOT include author names, dates, slide numbers, or URLs in questions.
 5. Each question has exactly 4 options (opt_1 through opt_4). One correct, three plausible distractors from the same text.
 6. Difficulty: ${req.difficulty === 'mixed' ? 'mix of easy, medium, and hard' : req.difficulty}.
-7. Include sourceCitation with the document title, page number, section, and a verbatim excerpt proving the answer.
+7. The sourceCitation page number must be the PAGE printed above the source block. Its excerpt must be a verbatim sentence from that SAME block and must contain the complete correct answer (or the exact factual words which make it correct). If you cannot meet this, do not generate the question.
 
 Return JSON:
 {
@@ -329,8 +331,15 @@ Return JSON:
     const concepts: ExtractedConcept[] = [];
 
     docs.forEach((doc) => {
-      const cleaned = cleanPdfText(doc.rawText);
-      const sections = this.splitIntoSections(cleaned, doc.pageCount);
+      // Prefer stored page-aware chunks over a guessed split of the full text.
+      // The page attached to a concept is then the page we can actually show.
+      const sections = doc.chunks?.length
+        ? doc.chunks.map((chunk) => ({
+            title: chunk.sectionTitle || 'Course Material',
+            text: cleanPdfText(chunk.content),
+            pageNumber: chunk.pageNumber,
+          }))
+        : this.splitIntoSections(cleanPdfText(doc.rawText), doc.pageCount);
 
       sections.forEach((section) => {
         const extracted = this.extractConceptsFromSection(section.text, section.title, section.pageNumber, doc.title);

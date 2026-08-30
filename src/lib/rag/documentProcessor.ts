@@ -98,7 +98,17 @@ export async function processDocumentBuffer(
   if (mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) {
     try {
       const pdfParse = require('pdf-parse');
-      const pdfData = await pdfParse(buffer);
+      let renderedPage = 0;
+      const pdfData = await pdfParse(buffer, {
+        // Keep a durable page boundary.  It is what lets a quiz citation open
+        // the exact PDF page that supplied the correct answer.
+        pagerender: async (pageData: any) => {
+          renderedPage += 1;
+          const textContent = await pageData.getTextContent({ normalizeWhitespace: true });
+          const text = textContent.items.map((item: any) => item.str || '').join(' ');
+          return `\n\n[[PAGE ${renderedPage}]]\n${text}`;
+        },
+      });
       rawText = pdfData.text || '';
       pageCount = pdfData.numpages || 1;
     } catch (err) {
@@ -143,6 +153,34 @@ export async function processDocumentBuffer(
 }
 
 export function chunkDocumentText(text: string, totalPages: number): DocumentChunk[] {
+  const markedPages = [...text.matchAll(/\[\[PAGE\s+(\d+)\]\]([\s\S]*?)(?=\[\[PAGE\s+\d+\]\]|$)/g)]
+    .map((match) => ({ pageNumber: Number(match[1]), text: match[2].trim() }))
+    .filter((page) => page.text.length > 0);
+
+  // PDFs are extracted page by page. Never combine text from separate pages,
+  // otherwise a citation cannot honestly point to a single visible page.
+  if (markedPages.length > 0) {
+    return markedPages.flatMap((page, pageIndex) => {
+      const pageParagraphs = page.text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+      const pageChunks: DocumentChunk[] = [];
+      let current = '';
+      let localIndex = 0;
+      pageParagraphs.forEach((paragraph, index) => {
+        const candidate = `${current}${current ? '\n\n' : ''}${paragraph}`;
+        if (candidate.split(/\s+/).length > 350 && current) {
+          pageChunks.push(createChunk(current, page.pageNumber, pageIndex * 100 + localIndex++));
+          current = paragraph;
+        } else {
+          current = candidate;
+        }
+        if (index === pageParagraphs.length - 1 && current) {
+          pageChunks.push(createChunk(current, page.pageNumber, pageIndex * 100 + localIndex));
+        }
+      });
+      return pageChunks;
+    });
+  }
+
   const paragraphs = text
     .split(/\n\s*\n/)
     .map((p) => p.trim())
@@ -180,15 +218,7 @@ export function chunkDocumentText(text: string, totalPages: number): DocumentChu
       }
       if (!sectionTitle) sectionTitle = 'Core Curriculum Material';
 
-      chunks.push({
-        id: `chunk_${Date.now()}_${chunkIndex}`,
-        documentId: '',
-        chunkIndex,
-        pageNumber,
-        sectionTitle,
-        content: currentChunkText.trim(),
-        tokenEstimate: Math.round(wordCount * 1.3),
-      });
+      chunks.push(createChunk(currentChunkText.trim(), pageNumber, chunkIndex, sectionTitle));
 
       chunkIndex += 1;
       currentChunkText = '';
@@ -196,6 +226,19 @@ export function chunkDocumentText(text: string, totalPages: number): DocumentChu
   });
 
   return chunks;
+}
+
+function createChunk(content: string, pageNumber: number, chunkIndex: number, sectionTitle?: string): DocumentChunk {
+  const firstLine = content.split('\n').map((line) => line.trim()).find(Boolean) || '';
+  return {
+    id: `chunk_${Date.now()}_${chunkIndex}`,
+    documentId: '',
+    chunkIndex,
+    pageNumber,
+    sectionTitle: sectionTitle || (firstLine.length > 4 && firstLine.length < 80 ? firstLine : 'Core Curriculum Material'),
+    content,
+    tokenEstimate: Math.round(content.split(/\s+/).length * 1.3),
+  };
 }
 
 export function extractKeyTopics(text: string): string[] {
