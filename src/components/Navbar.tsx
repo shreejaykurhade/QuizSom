@@ -34,17 +34,17 @@ export default function Navbar() {
         {/* Right: Action CTAs & Animated Theme Toggle */}
         <div className="flex items-center gap-2.5 z-10">
           <Link
-            href="/student"
+            href="/auth?role=student&next=%2Fstudent"
             className="text-xs font-semibold px-3.5 py-2 rounded-xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 transition-all flex items-center gap-1.5 shadow-sm"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Student Join
+            Student Sign in
           </Link>
           <Link
-            href="/teacher/dashboard"
+            href="/auth?role=faculty&next=%2Fteacher%2Fdashboard"
             className="text-xs font-semibold px-4 py-2 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:!text-black dark:hover:bg-zinc-100 transition-all flex items-center gap-1.5 shadow-sm hover:shadow"
           >
-            <span>Faculty Portal</span>
+            <span>Faculty Sign in</span>
             <ArrowRight className="w-3.5 h-3.5 text-white/80 dark:!text-black" />
           </Link>
           

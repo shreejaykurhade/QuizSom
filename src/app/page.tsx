@@ -125,18 +125,18 @@ export default function LandingPage() {
             {/* Dual Path Action Buttons */}
             <div className="flex flex-wrap items-center gap-3.5 pt-1">
               <Link
-                href="/teacher/dashboard"
+                href="/auth?role=faculty&next=%2Fteacher%2Fdashboard"
                 className="px-6 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-semibold text-sm transition-all flex items-center gap-2 shadow-sm hover:shadow hover:-translate-y-0.5"
               >
-                Faculty Portal
+                Faculty Sign in
                 <ArrowRight className="w-4 h-4 text-white/80 dark:text-black" />
               </Link>
               <Link
-                href="/student"
+                href="/auth?role=student&next=%2Fstudent"
                 className="px-6 py-3 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-semibold text-sm border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 transition-all flex items-center gap-2 shadow-sm hover:-translate-y-0.5"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Student Access (Room Code)
+                Student Sign in
               </Link>
             </div>
           </div>
@@ -208,10 +208,10 @@ export default function LandingPage() {
             </div>
 
             <Link
-              href="/teacher/dashboard"
+              href="/auth?role=faculty&next=%2Fteacher%2Fdashboard"
               className="w-full py-3.5 px-6 rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow"
             >
-              <span>Enter Faculty Portal</span>
+              <span>Faculty Sign in</span>
               <ArrowRight className="w-4 h-4 text-white dark:text-black" />
             </Link>
           </div>
@@ -234,7 +234,7 @@ export default function LandingPage() {
             </div>
 
             <Link
-              href="/student"
+              href="/auth?role=student&next=%2Fstudent"
               className="w-full py-3.5 px-6 rounded-2xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs hover:border-slate-300 dark:hover:border-zinc-700"
             >
               <span>Join with Room Code</span>

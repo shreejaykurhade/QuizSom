@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { AuthProvider } from '@/components/AuthProvider';
 
 export const metadata: Metadata = {
   title: 'QuizSom — College AI Internal Assessment Platform',
@@ -42,7 +43,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/logo-icon.png" />
       </head>
       <body className="min-h-full flex flex-col antialiased selection:bg-slate-900 selection:text-white bg-[#F8FAFC]">
-        {children}
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );
