@@ -371,7 +371,7 @@ export default function CreatePlaygroundQuizPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,.pptx,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                accept=".pdf,.pptx,.docx,.txt,.md,.png,.jpg,.jpeg,.heic,.webp,.tiff,.bmp,image/*,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                 multiple
                 className="hidden"
                 onChange={handleFileUpload}
@@ -399,14 +399,14 @@ export default function CreatePlaygroundQuizPage() {
                     </div>
                     <div>
                       <div className="text-sm font-bold text-slate-900">
-                        Click or drag to upload your PDF notes
+                        Click or drag to upload your notes
                       </div>
                       <div className="text-xs text-slate-500 mt-0.5">
-                        Supports PDF lecture slides, textbook modules, summaries (Max 50MB)
+                        Supports PDFs, handwritten notes, photos & images (Max 50MB)
                       </div>
                     </div>
                     <span className="inline-block mt-2 font-mono text-[11px] text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200 font-bold">
-                      Upload PDF Document
+                      Upload Notes (PDF / Image)
                     </span>
                   </div>
                 )}

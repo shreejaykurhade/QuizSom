@@ -47,6 +47,7 @@ export default function CreateAssessmentWizard() {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatusText, setUploadStatusText] = useState('');
   const [activeFolderTab, setActiveFolderTab] = useState<'all' | 'custom'>('all');
+  const [error, setError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -270,15 +271,19 @@ export default function CreateAssessmentWizard() {
         setGenerationProgress(100);
 
         setTimeout(() => {
-          if (data.questions && data.questions.length > 0) {
+          if (res.ok && data.questions && data.questions.length > 0) {
             setQuestions(data.questions);
+            setStep(4);
+          } else {
+            setError(data.error || 'Could not generate questions from the selected notes. Please check the notes and try again.');
+            setStep(2);
           }
-          setStep(4);
         }, 500);
       }, remainingWait);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Generation error:', err);
-      setStep(4);
+      setError(err?.message || 'Failed to connect to assessment generator.');
+      setStep(2);
     }
   };
 
@@ -465,7 +470,7 @@ export default function CreateAssessmentWizard() {
                 {isUploading ? (uploadStatusText || 'Extracting & chunking documents with RAG...') : 'Drop files / folders here, or use the buttons below'}
               </span>
               <span className="text-xs text-slate-500 mt-1 mb-4">
-                Supported formats: PDF, DOCX, TXT · Multiple files and whole folder structures supported
+                Supported formats: PDF, DOCX, TXT, PNG, JPG, HEIC · Handwritten notes & images supported
               </span>
 
               {/* Dual Upload Action Buttons */}
@@ -477,7 +482,7 @@ export default function CreateAssessmentWizard() {
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept=".pdf,.pptx,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
+                    accept=".pdf,.pptx,.docx,.txt,.md,.png,.jpg,.jpeg,.heic,.webp,.tiff,.bmp,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                     onChange={(e) => handleFilesUpload(e.target.files)}
                     disabled={isUploading}
                     className="hidden"

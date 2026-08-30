@@ -97,7 +97,7 @@ export default function TeacherMaterialsPage() {
           {isUploading ? 'Chunking & Indexing...' : 'Upload New Syllabus'}
           <input
             type="file"
-            accept=".pdf,.pptx,.docx,.txt,.md"
+            accept=".pdf,.pptx,.docx,.txt,.md,.png,.jpg,.jpeg,.heic,.webp,.tiff,.bmp"
             onChange={handleUpload}
             disabled={isUploading}
             className="hidden"

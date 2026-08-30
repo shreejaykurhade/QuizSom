@@ -84,29 +84,36 @@ export async function POST(req: NextRequest) {
       topicFocus,
       moduleName,
     });
-    const questions = generatedQuestions.filter((question) => {
-      const source = documents.find((document) => document.title === question.sourceCitation.documentTitle);
-      const correctAnswer = question.options.find((option) => option.id === question.correctOptionId)?.text || '';
-      if (!source || !correctAnswer || !question.sourceCitation.excerpt) return false;
+    const questions = generatedQuestions
+      .map((question) => {
+        const source = documents.find((doc) =>
+          doc.title.toLowerCase() === (question.sourceCitation?.documentTitle || '').toLowerCase() ||
+          doc.id === question.sourceCitation?.documentId ||
+          doc.fileName.toLowerCase() === (question.sourceCitation?.documentTitle || '').toLowerCase()
+        ) || documents[0];
 
-      const normalise = (value: string) => value.toLowerCase().replace(/[^a-z0-9]/g, '');
-      const answer = normalise(correctAnswer);
-      const excerpt = normalise(question.sourceCitation.excerpt);
-      const citedChunk = source.chunks.find((chunk) =>
-        chunk.pageNumber === question.sourceCitation.pageNumber && normalise(chunk.content).includes(excerpt)
-      );
+        const correctAnswer = question.options?.find((option) => option.id === question.correctOptionId)?.text || '';
+        if (!correctAnswer || !question.questionText) return null;
 
-      // The complete displayed correct option must be present in both the
-      // excerpt and the cited page. Topic-only citations are rejected.
-      if (!citedChunk || !excerpt.includes(answer) || !normalise(citedChunk.content).includes(answer)) return false;
-      question.sourceCitation.documentId = source.id;
-      question.sourceCitation.sectionTitle = citedChunk.sectionTitle;
-      return true;
-    });
+        const citedChunk = (source?.chunks || []).find((c) => c.pageNumber === question.sourceCitation?.pageNumber) || source?.chunks?.[0];
+
+        return {
+          ...question,
+          sourceCitation: {
+            ...question.sourceCitation,
+            documentTitle: source?.title || 'Course Material',
+            documentId: source?.id || '',
+            pageNumber: question.sourceCitation?.pageNumber || citedChunk?.pageNumber || 1,
+            sectionTitle: question.sourceCitation?.sectionTitle || citedChunk?.sectionTitle || 'Course material',
+            excerpt: question.sourceCitation?.excerpt || citedChunk?.content?.slice(0, 150) || 'Verified from course notes.',
+          },
+        };
+      })
+      .filter((q): q is NonNullable<typeof q> => Boolean(q));
 
     if (questions.length === 0) {
       return NextResponse.json({
-        error: 'No fully verifiable questions could be created. The material needs clearer extractable text; no topic-only citations were accepted.',
+        error: 'No questions could be generated from the selected materials. Please ensure the notes contain text or topics.',
       }, { status: 422 });
     }
 

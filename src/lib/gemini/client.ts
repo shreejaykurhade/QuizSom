@@ -129,11 +129,13 @@ export class GeminiAssessmentEngine {
 
     const contextText = docs
       .map((d, idx) => {
-        const groundedChunks = (d.chunks || []).map((chunk) =>
-          `[DOCUMENT: ${d.title} | PAGE: ${chunk.pageNumber} | SECTION: ${chunk.sectionTitle || 'Course material'}]\n${chunk.content}`
-        ).join('\n\n');
+        const groundedChunks = (d.chunks && d.chunks.length > 0)
+          ? d.chunks.map((chunk) =>
+              `[DOCUMENT: ${d.title} | PAGE: ${chunk.pageNumber} | SECTION: ${chunk.sectionTitle || 'Course material'}]\n${chunk.content}`
+            ).join('\n\n')
+          : `[DOCUMENT: ${d.title} | PAGE: 1 | SECTION: Course Notes]\n${d.rawText || 'Core curriculum content.'}`;
         return `================================================================================
-DOCUMENT #${idx + 1}: "${d.title}" (${d.pageCount} pages)
+DOCUMENT #${idx + 1}: "${d.title}" (${d.pageCount || 1} pages)
 Generate ~${questionsPerDoc} questions from this document
 ================================================================================
 ${groundedChunks.slice(0, 25000)}`;

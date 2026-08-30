@@ -128,10 +128,18 @@ export async function processDocumentBuffer(
   mimeType: string,
   courseId: string
 ): Promise<DocumentMaterial> {
+  // Lazy-import to keep the module lightweight when vision isn't needed
+  const { isImageMime, isTextSparse, isVisionSupported, extractTextWithVision } = await import('./visionOcr');
+
   let rawText = '';
   let pageCount = 1;
+  let usedVisionOcr = false;
 
-  if (mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) {
+  const isPdf = mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf');
+  const isImage = isImageMime(mimeType) || /\.(png|jpe?g|webp|heic|heif|tiff?|bmp)$/i.test(fileName);
+
+  if (isPdf) {
+    // ── Step 1: Try standard text-layer extraction via pdf-parse ──
     try {
       const pdfParse = require('pdf-parse');
       let renderedPage = 0;
@@ -148,8 +156,40 @@ export async function processDocumentBuffer(
       rawText = pdfData.text || '';
       pageCount = pdfData.numpages || 1;
     } catch (err) {
-      console.warn('PDF parse fallback to text decoding:', err);
-      rawText = buffer.toString('utf-8');
+      console.warn('PDF parse fallback:', err);
+      rawText = '';
+    }
+
+    // ── Step 2: If text is sparse (scanned / handwritten), fall back to Gemini Vision OCR ──
+    if (isTextSparse(rawText, pageCount) && isVisionSupported(mimeType)) {
+      console.log(`[DocumentProcessor] Sparse text detected (${rawText.split(/\s+/).length} words / ${pageCount} pages). Attempting Gemini Vision OCR...`);
+      try {
+        const visionText = await extractTextWithVision(buffer, mimeType, pageCount);
+        if (visionText && visionText.trim().length > rawText.trim().length) {
+          rawText = visionText;
+          usedVisionOcr = true;
+          console.log(`[DocumentProcessor] Vision OCR successful — extracted ${visionText.split(/\s+/).length} words`);
+        }
+      } catch (err) {
+        console.warn('[DocumentProcessor] Vision OCR fallback failed:', err);
+      }
+    }
+  } else if (isImage) {
+    // ── Direct image upload (photo of handwritten notes) ──
+    console.log(`[DocumentProcessor] Image file detected (${mimeType}). Using Gemini Vision OCR...`);
+    try {
+      const visionText = await extractTextWithVision(buffer, mimeType, 1);
+      if (visionText && visionText.trim().length > 10) {
+        rawText = visionText;
+        usedVisionOcr = true;
+        pageCount = 1;
+        console.log(`[DocumentProcessor] Image OCR successful — extracted ${visionText.split(/\s+/).length} words`);
+      } else {
+        rawText = '[Image file — no text could be extracted]';
+      }
+    } catch (err) {
+      console.warn('[DocumentProcessor] Image Vision OCR failed:', err);
+      rawText = '[Image file — OCR extraction failed]';
     }
   } else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' || fileName.toLowerCase().endsWith('.pptx')) {
     const extracted = await extractOpenXmlText(buffer, 'pptx');
@@ -162,13 +202,15 @@ export async function processDocumentBuffer(
   } else if (fileName.toLowerCase().endsWith('.ppt')) {
     throw new Error('Legacy .ppt files are not supported. Save the presentation as .pptx and upload it again.');
   } else {
+    // ── Plain text / markdown / docx fallback ──
     rawText = buffer.toString('utf-8');
     const words = rawText.split(/\s+/).length;
     pageCount = Math.max(1, Math.ceil(words / 400));
   }
 
-  // Thorough clean of extracted text
-  rawText = cleanPdfText(rawText);
+  // Thorough clean of extracted text (skip aggressive cleaning for vision OCR output
+  // since Gemini already returns clean structured text)
+  rawText = usedVisionOcr ? rawText.trim() : cleanPdfText(rawText);
 
   // Create clean chunks
   const chunks = chunkDocumentText(rawText, pageCount);
@@ -272,6 +314,10 @@ export function chunkDocumentText(text: string, totalPages: number): DocumentChu
       currentChunkText = '';
     }
   });
+
+  if (chunks.length === 0 && text.trim().length > 0) {
+    chunks.push(createChunk(text.trim(), 1, 0, 'Course Material'));
+  }
 
   return chunks;
 }
