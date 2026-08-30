@@ -170,8 +170,8 @@ export default function TeacherLayout({
     { label: 'Create Assessment', href: '/teacher/create', icon: PlusCircle, isHighlight: true },
     { label: 'Question Bank', href: '/teacher/question-bank', icon: FileQuestion },
     { label: 'Materials Library', href: '/teacher/materials', icon: BookOpen },
-    { label: 'Live Rooms', href: '/teacher/rooms/CS301A', icon: Radio, badge: 'Live' },
-    { label: 'Results & Analytics', href: '/teacher/results/assess_dbms_ia01', icon: BarChart2 },
+    { label: 'Live Rooms', href: '/teacher/rooms', icon: Radio, badge: 'Live' },
+    { label: 'Results & Analytics', href: '/teacher/results', icon: BarChart2 },
   ];
 
   return (
@@ -191,7 +191,9 @@ export default function TeacherLayout({
           <nav className="p-3 space-y-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const isActive = pathname === item.href;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== '/teacher/dashboard' && pathname.startsWith(item.href));
               return (
                 <Link
                   key={item.href}

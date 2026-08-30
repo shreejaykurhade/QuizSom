@@ -84,10 +84,10 @@ export default function TeacherLiveRoomPage() {
             <span className="text-xs text-slate-400 font-mono">Room: {code}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-            {assessment?.title || 'Database Management Systems — IA 01'}
+            {assessment?.title || 'Live Assessment Session'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            {assessment?.moduleName || 'Module 2: Relational Model & Normalization'}
+            {assessment?.moduleName || assessment?.courseName || 'Real-time proctored session'}
           </p>
         </div>
 
@@ -101,7 +101,7 @@ export default function TeacherLiveRoomPage() {
           </button>
 
           <Link
-            href={`/teacher/results/assess_dbms_ia01`}
+            href={assessment?.id ? `/teacher/results/${assessment.id}` : '/teacher/results'}
             className="btn-primary py-2 px-4 text-xs font-bold shadow-sm"
           >
             <BarChart2 className="w-3.5 h-3.5" />

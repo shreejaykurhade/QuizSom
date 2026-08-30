@@ -65,21 +65,21 @@ export default function TeacherResultsAnalyticsPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-700 border border-indigo-200">
-              {assessment?.courseCode || 'CS301'}
+              {assessment?.courseCode || 'COURSE'}
             </span>
             <span className="text-xs text-slate-400 font-mono">Evaluation & Integrity Audit</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-            {assessment?.title || 'Database Management Systems — IA 01'}
+            {assessment?.title || 'Course Assessment Analytics'}
           </h1>
           <p className="text-xs text-slate-500 mt-0.5">
-            {assessment?.moduleName || 'Module 2: Relational Model & Normalization'}
+            {assessment?.moduleName || assessment?.courseName || 'Institutional Performance Report'}
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <Link
-            href="/teacher/rooms/CS301A"
+            href={data?.rooms?.[0]?.code ? `/teacher/rooms/${data.rooms[0].code}` : '/teacher/rooms'}
             className="btn-secondary py-2 px-3.5 text-xs font-semibold"
           >
             Live Room View
