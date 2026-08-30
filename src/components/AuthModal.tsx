@@ -46,8 +46,12 @@ export function AuthFormContent({ initialRole = 'faculty', onSuccess, isModal = 
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
-  const redirectUser = () => {
-    const nextUrl = searchParams?.get('next') || (role === 'faculty' ? '/teacher/dashboard' : '/student');
+  const redirectUser = (selectedRole?: 'student' | 'faculty') => {
+    const activeRole = selectedRole || role;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('quizsom_user_role', activeRole);
+    }
+    const nextUrl = searchParams?.get('next') || (activeRole === 'faculty' ? '/teacher/dashboard' : '/student');
     if (onSuccess) {
       onSuccess();
     }

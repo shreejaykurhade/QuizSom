@@ -58,6 +58,9 @@ export default function TeacherLayout({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('quizsom_user_role', 'faculty');
+    }
     if (user) {
       const googleName =
         user.displayName ||

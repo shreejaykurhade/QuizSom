@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
@@ -26,6 +27,12 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   const router = useRouter();
   const { user, logout } = useAuth();
   const displayName = user?.displayName || user?.email?.split('@')[0] || 'Student';
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('quizsom_user_role', 'student');
+    }
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] text-slate-900 md:flex">

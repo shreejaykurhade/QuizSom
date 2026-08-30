@@ -7,25 +7,30 @@ import Logo from './Logo';
 import { SlideTabs } from './ui/slide-tabs';
 import { AnimatedThemeToggle } from './ui/animated-theme-toggle';
 import { AuthDialog } from './AuthModal';
-import { ArrowRight, LayoutDashboard } from 'lucide-react';
+import { ArrowRight, LayoutDashboard, GraduationCap } from 'lucide-react';
 import { useAuth } from './AuthProvider';
 
 export default function Navbar() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [mounted, setMounted] = useState(false);
+  const [userRole, setUserRole] = useState<'student' | 'faculty' | null>(null);
   const [studentAuthOpen, setStudentAuthOpen] = useState(false);
   const [facultyAuthOpen, setFacultyAuthOpen] = useState(false);
 
   useEffect(() => {
     setMounted(true);
+    if (typeof window !== 'undefined') {
+      const savedRole = localStorage.getItem('quizsom_user_role') as 'student' | 'faculty' | null;
+      setUserRole(savedRole);
+    }
   }, []);
 
   const navTabs = [
     { label: 'Portals', href: '/#portals' },
     { label: 'Live Sandbox', href: '/#preview' },
     { label: 'Capabilities', href: '/#features' },
-    { label: 'Course Materials', href: '/teacher/materials' },
+    { label: 'Study Notes', href: '/student/materials' },
   ];
 
   return (
@@ -49,19 +54,51 @@ export default function Navbar() {
                 {user.displayName || user.email?.split('@')[0]}
               </span>
 
-              {/* Dashboard Button on Left of Sign out */}
-              <Link
-                href="/teacher/dashboard"
-                className="text-xs font-bold px-3.5 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-100 transition-all flex items-center gap-1.5 shadow-2xs"
-              >
-                <LayoutDashboard className="w-3.5 h-3.5" />
-                <span>Dashboard</span>
-              </Link>
+              {/* Dynamic Role-Based Dashboard / Portal Routing */}
+              {userRole === 'student' ? (
+                <Link
+                  href="/student"
+                  className="text-xs font-bold px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1.5 shadow-2xs"
+                >
+                  <GraduationCap className="w-3.5 h-3.5" />
+                  <span>Student Portal</span>
+                </Link>
+              ) : userRole === 'faculty' ? (
+                <Link
+                  href="/teacher/dashboard"
+                  className="text-xs font-bold px-3.5 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-100 transition-all flex items-center gap-1.5 shadow-2xs"
+                >
+                  <LayoutDashboard className="w-3.5 h-3.5" />
+                  <span>Faculty Dashboard</span>
+                </Link>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    href="/student"
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white transition-all flex items-center gap-1 shadow-2xs"
+                  >
+                    <GraduationCap className="w-3.5 h-3.5" />
+                    <span>Student</span>
+                  </Link>
+                  <Link
+                    href="/teacher/dashboard"
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black transition-all flex items-center gap-1 shadow-2xs"
+                  >
+                    <LayoutDashboard className="w-3.5 h-3.5" />
+                    <span>Faculty</span>
+                  </Link>
+                </div>
+              )}
 
               {/* Sign out Button */}
               <button
                 type="button"
-                onClick={() => logout()}
+                onClick={async () => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('quizsom_user_role');
+                  }
+                  await logout();
+                }}
                 className="text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-700/80 transition-all cursor-pointer"
               >
                 Sign out
