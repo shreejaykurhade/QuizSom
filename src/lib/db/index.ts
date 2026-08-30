@@ -625,7 +625,13 @@ class DatabaseStore {
         lowestScorePercentage: 0,
         completionRatePercentage: 0,
         averageDurationSeconds: 0,
-        scoreDistribution: [],
+        scoreDistribution: [
+          { range: '90–100%', count: 0 },
+          { range: '80–89%', count: 0 },
+          { range: '70–79%', count: 0 },
+          { range: '60–69%', count: 0 },
+          { range: '< 60%', count: 0 },
+        ],
         topicStats: [],
         questionStats: [],
         integritySummary: {
@@ -634,6 +640,8 @@ class DatabaseStore {
           totalTabSwitches: 0,
           autoSubmittedCount: 0,
         },
+        geminiPedagogicalInsights:
+          'No student examination telemetry recorded yet for this assessment. Pedagogical analysis and concept friction identification will automatically generate once students complete their proctored attempts.',
       };
     }
 
@@ -724,6 +732,22 @@ class DatabaseStore {
       if (a.status === 'AUTO_SUBMITTED') autoSubmittedCount += 1;
     });
 
+    // Dynamic Gemini Pedagogical Summary based on real topic metrics
+    const strongTopics = topicStats.filter((t) => t.accuracyPercentage >= 70).map((t) => t.topic);
+    const weakTopics = topicStats.filter((t) => t.accuracyPercentage < 60).map((t) => t.topic);
+
+    let pedagogicalInsight = '';
+    if (strongTopics.length > 0 && weakTopics.length > 0) {
+      pedagogicalInsight = `Students demonstrated strong comprehension across ${strongTopics.slice(0, 3).join(', ')}. The highest cognitive friction occurred in ${weakTopics.slice(0, 3).join(', ')} (class average ${averageScorePercentage}%). Focused concept reinforcement on ${weakTopics[0]} is recommended for remedial lecture clarification.`;
+    } else if (weakTopics.length > 0) {
+      pedagogicalInsight = `Cohort examination submissions indicate significant cognitive friction across ${weakTopics.slice(0, 3).join(', ')} (class average ${averageScorePercentage}%). Foundational review and worked problem demonstrations are recommended before subsequent evaluations.`;
+    } else if (strongTopics.length > 0) {
+      pedagogicalInsight = `Exceptional cohort mastery observed across evaluated topics (${strongTopics.slice(0, 3).join(', ')}) with a strong class average of ${averageScorePercentage}%. Core syllabus learning outcomes are well consolidated.`;
+    } else {
+      const topicNames = topicStats.map((t) => t.topic).filter(Boolean);
+      pedagogicalInsight = `Cohort demonstrated steady conceptual progress across ${topicNames.slice(0, 3).join(', ') || 'evaluated curriculum topics'} with a class average of ${averageScorePercentage}%. Continued application practice is recommended.`;
+    }
+
     return {
       assessmentId,
       totalParticipants: attempts.length,
@@ -743,8 +767,7 @@ class DatabaseStore {
         totalTabSwitches,
         autoSubmittedCount,
       },
-      geminiPedagogicalInsights:
-        'Students exhibited high comprehension on First and Second Normal Form definitions and Key Constraints (average 88% accuracy). The highest cognitive friction occurred in 3NF vs BCNF dependency preservation trade-offs and Armstrong Axioms transitivity application (62% accuracy). Concurrency and lossless decomposition testing are primary targets for remedial lecture clarification.',
+      geminiPedagogicalInsights: pedagogicalInsight,
     };
   }
 

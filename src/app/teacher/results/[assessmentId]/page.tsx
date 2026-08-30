@@ -180,8 +180,8 @@ export default function TeacherResultsAnalyticsPage() {
             <h2 className="text-sm font-bold text-slate-900">Class Score Distribution Histogram</h2>
             <div className="space-y-3 pt-2">
               {analytics?.scoreDistribution?.map((bin: any) => {
-                const total = analytics?.totalParticipants || 48;
-                const pct = Math.round((bin.count / total) * 100);
+                const total = analytics?.totalParticipants || 0;
+                const pct = total > 0 ? Math.round((bin.count / total) * 100) : 0;
                 return (
                   <div key={bin.range} className="space-y-1">
                     <div className="flex items-center justify-between text-xs font-mono text-slate-700">
@@ -191,7 +191,7 @@ export default function TeacherResultsAnalyticsPage() {
                     <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-slate-900 to-indigo-900 rounded-full transition-all"
-                        style={{ width: `${Math.max(5, pct)}%` }}
+                        style={{ width: `${bin.count > 0 ? Math.max(5, pct) : 0}%` }}
                       />
                     </div>
                   </div>
