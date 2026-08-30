@@ -18,6 +18,20 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 });
     }
 
+    // Access authorization check
+    const isOwner = document.ownerId === user.uid;
+    const isStudentJoined = db.getAttemptsByStudent(user.uid).some((attempt) => {
+      const asmt = db.getAssessmentById(attempt.assessmentId);
+      return asmt?.materialDocumentIds?.includes(document.id);
+    });
+
+    if (!isOwner && !isStudentJoined) {
+      return NextResponse.json(
+        { error: 'You have not joined an assessment room assigned to this study material.' },
+        { status: 403 }
+      );
+    }
+
     if (!document.storagePath || !fs.existsSync(document.storagePath)) {
       return NextResponse.json(
         { error: 'Original file unavailable on server storage.' },

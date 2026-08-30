@@ -1,22 +1,28 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   FileText,
   Search,
   MessageSquareText,
-  Download,
   ExternalLink,
   RefreshCw,
-  Sparkles,
-  Layers,
-  FileCheck2,
-  ArrowRight,
   PlusCircle,
+  ArrowRight,
+  Radio,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/auth/apiFetch';
+
+interface RoomInfo {
+  roomCode: string;
+  assessmentTitle: string;
+  courseName?: string;
+}
 
 interface StudyMaterial {
   id: string;
@@ -29,22 +35,27 @@ interface StudyMaterial {
   uploadedAt: string;
   courseId?: string;
   courseName?: string;
-  isAssigned?: boolean;
+  joinedRooms?: RoomInfo[];
+  primaryRoomCode?: string;
 }
 
 export default function StudentStudyMaterialsPage() {
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
+  const [joinedRooms, setJoinedRooms] = useState<string[]>([]);
+  const [selectedRoomFilter, setSelectedRoomFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'assigned'>('all');
+  const [joinCode, setJoinCode] = useState('');
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const res = await apiFetch('/api/student/materials');
       const data = await res.json();
-      if (res.ok && data.materials) {
-        setMaterials(data.materials);
+      if (res.ok) {
+        setMaterials(data.materials || []);
+        setJoinedRooms(data.joinedRooms || []);
       }
     } catch (e) {
       console.error('Failed to load student study materials:', e);
@@ -57,8 +68,21 @@ export default function StudentStudyMaterialsPage() {
     void load();
   }, [load]);
 
+  const handleJoinRoom = (e: FormEvent) => {
+    e.preventDefault();
+    const cleanCode = joinCode.toUpperCase().trim();
+    if (/^[A-Z0-9]{6}$/.test(cleanCode)) {
+      router.push(`/exam/${cleanCode}`);
+    }
+  };
+
   const filteredMaterials = materials.filter((m) => {
-    if (filter === 'assigned' && !m.isAssigned) return false;
+    if (selectedRoomFilter !== 'all') {
+      const matchesRoom = m.joinedRooms?.some(
+        (r) => r.roomCode === selectedRoomFilter
+      );
+      if (!matchesRoom && m.primaryRoomCode !== selectedRoomFilter) return false;
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       const matchTitle = m.title.toLowerCase().includes(q);
@@ -82,17 +106,17 @@ export default function StudentStudyMaterialsPage() {
         <div>
           <div className="flex items-center gap-2">
             <span className="font-mono text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-              STUDY REPOSITORY
+              ASSIGNED REPOSITORY
             </span>
             <span className="text-xs text-slate-400 font-mono">
-              {materials.length} Document{materials.length === 1 ? '' : 's'} Available
+              {materials.length} Unlocked Document{materials.length === 1 ? '' : 's'}
             </span>
           </div>
           <h1 className="mt-1 text-2xl sm:text-3xl font-extrabold text-slate-900">
             Study Materials & Lecture Notes
           </h1>
           <p className="mt-1 text-sm text-slate-500">
-            Read source course materials uploaded by your faculty or ask questions grounded in your assigned notes.
+            Course lecture slides and reference notes unlocked from the assessment rooms you have joined.
           </p>
         </div>
 
@@ -114,132 +138,179 @@ export default function StudentStudyMaterialsPage() {
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
-        <div className="relative flex-1 w-full flex items-center">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none z-10" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search notes, textbooks, topics, or PDF names..."
-            className="input-academic text-xs w-full"
-            style={{ paddingLeft: '2.5rem' }}
-          />
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0 self-end sm:self-auto font-mono text-xs font-bold">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              filter === 'all'
-                ? 'bg-slate-900 text-white shadow-sm'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            All Materials ({materials.length})
-          </button>
-          <button
-            onClick={() => setFilter('assigned')}
-            className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
-              filter === 'assigned'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
-            }`}
-          >
-            Joined Rooms ({materials.filter((m) => m.isAssigned).length})
-          </button>
-        </div>
-      </div>
-
-      {/* Material Cards Grid */}
       {loading ? (
         <div className="py-20 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
           <RefreshCw className="w-4 h-4 animate-spin text-emerald-600" />
-          <span>Loading course study materials...</span>
+          <span>Verifying room enrollments and study materials...</span>
         </div>
-      ) : filteredMaterials.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-2xl border border-dashed border-slate-200 space-y-4">
-          <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mx-auto">
-            <BookOpen className="w-6 h-6" />
+      ) : materials.length === 0 ? (
+        /* Empty State: Student has not joined any rooms yet */
+        <div className="p-8 sm:p-12 rounded-3xl bg-white border border-slate-200 shadow-sm max-w-2xl mx-auto text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-100 text-blue-700 flex items-center justify-center mx-auto shadow-sm">
+            <Lock className="w-8 h-8" />
           </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900">No Study Materials Found</h3>
-            <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
-              {search
-                ? 'No documents matched your search query. Try searching with different keywords.'
-                : 'Your professors have not uploaded lecture notes yet. Once uploaded, course slides and notes will appear here.'}
+
+          <div className="space-y-2">
+            <h2 className="text-xl font-extrabold text-slate-900">
+              No Study Materials Unlocked Yet
+            </h2>
+            <p className="text-xs text-slate-500 max-w-md mx-auto leading-relaxed">
+              Study materials uploaded by faculty members are unlocked under the specific room codes you join. Enter your 6-character room code below to access assigned notes.
             </p>
           </div>
-          <Link
-            href="/student"
-            className="btn-primary py-2 px-4 text-xs font-bold inline-flex items-center gap-1.5"
+
+          {/* Inline Join Form */}
+          <form
+            onSubmit={handleJoinRoom}
+            className="max-w-md mx-auto flex flex-col sm:flex-row gap-2 pt-2"
           >
-            <PlusCircle className="w-4 h-4" />
-            Join a Faculty Room
-          </Link>
+            <input
+              type="text"
+              value={joinCode}
+              onChange={(e) =>
+                setJoinCode(
+                  e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+                )
+              }
+              placeholder="ENTER ROOM CODE (e.g. 8EM2CE)"
+              className="min-w-0 flex-1 rounded-xl border border-slate-300 bg-slate-50 px-4 py-3 font-mono text-sm font-bold tracking-[0.18em] text-slate-900 outline-none focus:border-blue-600 focus:bg-white text-center sm:text-left"
+            />
+            <button
+              type="submit"
+              disabled={!/^[A-Z0-9]{6}$/.test(joinCode)}
+              className="btn-primary py-3 px-5 text-xs font-bold flex items-center justify-center gap-1.5 disabled:opacity-40 shadow-sm"
+            >
+              <Unlock className="w-4 h-4" />
+              Unlock Notes
+            </button>
+          </form>
+
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-center gap-2 text-xs text-slate-400 font-mono">
+            <span>Room codes are provided by your course professor</span>
+          </div>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredMaterials.map((doc) => (
-            <div
-              key={doc.id}
-              className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200/70 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  {doc.isAssigned && (
-                    <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Room Material ✓
-                    </span>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 leading-snug line-clamp-2">
-                    {doc.title}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-1 truncate">
-                    {doc.courseName || 'Course Notes'}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500 flex-wrap pt-1">
-                  <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                    {doc.pageCount || 1} Page{doc.pageCount === 1 ? '' : 's'}
-                  </span>
-                  <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
-                    {formatFileSize(doc.fileSize)}
-                  </span>
-                  <span className="text-slate-400">
-                    {new Date(doc.uploadedAt).toLocaleDateString()}
-                  </span>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
-                <a
-                  href={`/api/materials/${doc.id}/file`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5 hover:text-slate-900"
-                >
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-                  View PDF
-                </a>
-                <Link
-                  href="/student/chat"
-                  className="btn-primary py-1.5 px-3 text-xs font-bold flex items-center gap-1.5 shadow-2xs"
-                >
-                  <MessageSquareText className="w-3.5 h-3.5 text-emerald-300" />
-                  Ask in Chat
-                </Link>
-              </div>
+        /* Unlocked Materials View */
+        <div className="space-y-6">
+          {/* Filter & Search Bar */}
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="relative flex-1 w-full flex items-center">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 pointer-events-none z-10" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search notes, topics, or PDF names..."
+                className="input-academic text-xs w-full"
+                style={{ paddingLeft: '2.5rem' }}
+              />
             </div>
-          ))}
+
+            {/* Room Filters */}
+            <div className="flex items-center gap-1.5 shrink-0 self-start sm:self-auto font-mono text-xs font-bold flex-wrap">
+              <button
+                onClick={() => setSelectedRoomFilter('all')}
+                className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                  selectedRoomFilter === 'all'
+                    ? 'bg-slate-900 text-white shadow-sm'
+                    : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                All Joined ({materials.length})
+              </button>
+              {joinedRooms.map((code) => (
+                <button
+                  key={code}
+                  onClick={() => setSelectedRoomFilter(code)}
+                  className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer flex items-center gap-1 ${
+                    selectedRoomFilter === code
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  <Radio className="w-3 h-3" />
+                  Room {code}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Cards Grid */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {filteredMaterials.map((doc) => (
+              <div
+                key={doc.id}
+                className="p-5 rounded-2xl bg-white border border-slate-200/90 shadow-sm hover:border-emerald-300 hover:shadow-md transition-all flex flex-col justify-between space-y-4"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-50 to-blue-50 border border-emerald-200/70 text-emerald-700 flex items-center justify-center shrink-0 shadow-2xs">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    {doc.joinedRooms?.[0]?.roomCode && (
+                      <span className="text-[10px] font-mono font-bold uppercase px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                        Room: {doc.joinedRooms[0].roomCode}
+                      </span>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 leading-snug line-clamp-2">
+                      {doc.title}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-1 truncate">
+                      {doc.joinedRooms?.[0]?.assessmentTitle || doc.courseName || 'Course Material'}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 font-mono text-[11px] text-slate-500 flex-wrap pt-1">
+                    <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                      {doc.pageCount || 1} Page{doc.pageCount === 1 ? '' : 's'}
+                    </span>
+                    <span className="bg-slate-50 px-2 py-0.5 rounded border border-slate-200">
+                      {formatFileSize(doc.fileSize)}
+                    </span>
+                    <span className="text-slate-400">
+                      {new Date(doc.uploadedAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
+                  <a
+                    href={`/api/materials/${doc.id}/file`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="btn-secondary py-1.5 px-3 text-xs font-semibold flex items-center gap-1.5 hover:text-slate-900"
+                  >
+                    <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+                    View PDF
+                  </a>
+                  <Link
+                    href="/student/chat"
+                    className="btn-primary py-1.5 px-3 text-xs font-bold flex items-center gap-1.5 shadow-2xs"
+                  >
+                    <MessageSquareText className="w-3.5 h-3.5 text-emerald-300" />
+                    Ask in Chat
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Quick Join Another Room Bar */}
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/60 to-emerald-50/40 border border-blue-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-slate-700">
+              <PlusCircle className="w-4 h-4 text-blue-600 shrink-0" />
+              <span>Have another room code from a professor? Join to unlock additional notes.</span>
+            </div>
+            <Link
+              href="/student"
+              className="btn-secondary py-1.5 px-3 text-xs font-bold text-blue-700 shrink-0"
+            >
+              Join Another Room →
+            </Link>
+          </div>
         </div>
       )}
     </div>
