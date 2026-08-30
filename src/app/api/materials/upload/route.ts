@@ -42,6 +42,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Do not report upload success until the document and its chunk index are
+    // visible to every Vercel function instance.
+    await db.flush();
+
     return NextResponse.json({
       success: true,
       documents: processedDocs,

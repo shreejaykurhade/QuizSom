@@ -47,6 +47,14 @@ class DatabaseStore {
     await this.mongoReady;
   }
 
+  async flush(): Promise<void> {
+    await this.ready();
+    if (process.env.MONGODB_URI) {
+      if (!this.mongoCollection) throw new Error('MongoDB persistence is unavailable');
+      await this.persistMongo();
+    }
+  }
+
   private getDefaultState(): DatabaseSchema {
     return {
       users: [], courses: [], documents: [], questions: [], assessments: [], rooms: [], attempts: [],

@@ -48,6 +48,10 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Generation may execute on another serverless instance immediately after
+    // this response, so wait until MongoDB contains the uploaded material.
+    await db.flush();
+
     return NextResponse.json({
       success: true,
       documents: processedDocs,
