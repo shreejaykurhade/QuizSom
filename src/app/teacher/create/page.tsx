@@ -34,9 +34,11 @@ import {
 import { Question, DocumentMaterial } from '@/lib/db/types';
 import SourcePagePreview from '@/components/SourcePagePreview';
 import { apiFetch } from '@/lib/auth/apiFetch';
+import { useAuth } from '@/components/AuthProvider';
 
 export default function CreateAssessmentWizard() {
   const router = useRouter();
+  const { user } = useAuth();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
   // Step 1 State: Multi-Document & Folder Selection
@@ -44,7 +46,7 @@ export default function CreateAssessmentWizard() {
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadStatusText, setUploadStatusText] = useState('');
-  const [activeFolderTab, setActiveFolderTab] = useState<'all' | 'dbms' | 'syllabus' | 'custom'>('all');
+  const [activeFolderTab, setActiveFolderTab] = useState<'all' | 'custom'>('all');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const folderInputRef = useRef<HTMLInputElement>(null);
@@ -214,10 +216,7 @@ export default function CreateAssessmentWizard() {
   const totalSelectedPages = selectedMaterials.reduce((acc, m) => acc + (m.pageCount || 1), 0);
   const totalSelectedChunks = selectedMaterials.reduce((acc, m) => acc + (m.chunks?.length || 4), 0);
 
-  // Folders groupings
-  const dbmsDocIds = materials.filter((m) => m.id.includes('dbms') || m.title.toLowerCase().includes('dbms') || m.title.toLowerCase().includes('relational')).map((m) => m.id);
-  const syllabusDocIds = materials.filter((m) => m.id.includes('syllabus') || m.title.toLowerCase().includes('syllabus') || m.id.includes('rai')).map((m) => m.id);
-  const customDocIds = materials.filter((m) => !dbmsDocIds.includes(m.id) && !syllabusDocIds.includes(m.id)).map((m) => m.id);
+  const allDocIds = materials.map((m) => m.id);
 
   const runGeneration = async () => {
     setStep(3);
@@ -330,8 +329,8 @@ export default function CreateAssessmentWizard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          courseId: 'course_dbms_301',
-          teacherId: 'user_prof_arvind',
+          courseId: selectedMaterials[0]?.courseId || 'course_general',
+          teacherId: user?.uid || 'faculty_member',
           title,
           moduleName,
           materialDocumentIds: selectedDocIds,
@@ -515,61 +514,27 @@ export default function CreateAssessmentWizard() {
                 </div>
               </div>
 
-              {/* Folder Quick-Select Cards */}
-              <div className="grid sm:grid-cols-2 gap-3 mb-2">
-                {/* DBMS Modules Folder */}
-                {dbmsDocIds.length > 0 && (
-                  <div
-                    onClick={() => handleSelectFolder(dbmsDocIds)}
-                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                      dbmsDocIds.every((id) => selectedDocIds.includes(id))
-                        ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
-                        : 'border-slate-200 bg-slate-50/80 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
-                        <FolderCheck className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">DBMS Modules Folder</div>
-                        <div className="text-[10px] text-slate-500 font-mono">
-                          {dbmsDocIds.length} Document(s) inside
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                      {dbmsDocIds.every((id) => selectedDocIds.includes(id)) ? 'Folder Selected ✓' : 'Select Folder'}
-                    </span>
+              {/* Material Quick-Select Actions */}
+              <div className="flex items-center gap-3 mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (allDocIds.every((id) => selectedDocIds.includes(id))) {
+                      setSelectedDocIds([]);
+                    } else {
+                      setSelectedDocIds(allDocIds);
+                    }
+                  }}
+                  className="p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 flex items-center justify-between gap-3 text-xs font-semibold cursor-pointer transition-all"
+                >
+                  <div className="flex items-center gap-2">
+                    <FolderCheck className="w-4 h-4 text-blue-600" />
+                    <span>{allDocIds.every((id) => selectedDocIds.includes(id)) ? 'Deselect All Materials' : 'Select All Materials'}</span>
                   </div>
-                )}
-
-                {/* Syllabus & Notes Folder */}
-                {syllabusDocIds.length > 0 && (
-                  <div
-                    onClick={() => handleSelectFolder(syllabusDocIds)}
-                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                      syllabusDocIds.every((id) => selectedDocIds.includes(id))
-                        ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
-                        : 'border-slate-200 bg-slate-50/80 hover:bg-slate-100'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
-                        <Folder className="w-4 h-4" />
-                      </div>
-                      <div>
-                        <div className="text-xs font-bold text-slate-900">Syllabus & Curriculum Folder</div>
-                        <div className="text-[10px] text-slate-500 font-mono">
-                          {syllabusDocIds.length} Document(s) inside
-                        </div>
-                      </div>
-                    </div>
-                    <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
-                      {syllabusDocIds.every((id) => selectedDocIds.includes(id)) ? 'Folder Selected ✓' : 'Select Folder'}
-                    </span>
-                  </div>
-                )}
+                  <span className="font-mono text-[10px] text-slate-500 font-bold bg-white px-2 py-0.5 rounded border border-slate-200">
+                    {materials.length} Documents
+                  </span>
+                </button>
               </div>
 
               {/* Individual Documents Multi-Select List */}

@@ -333,9 +333,9 @@ export default function LandingPage() {
                         <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-zinc-900 text-blue-700 dark:text-zinc-200 border border-blue-200 dark:border-zinc-800">
                           CS301
                         </span>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Database Management Systems — IA 01</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Course Assessment — IA 01</h3>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Module 2: Relational Model & Schema Normalization</p>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Module Evaluation: Core Concepts & Applied Problem Solving</p>
                     </div>
                     <div className="flex items-center gap-4 text-xs font-mono">
                       <div>
@@ -475,10 +475,10 @@ export default function LandingPage() {
                       <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">Verified Grounding</span>
                     </div>
                     <div className="text-slate-900 dark:text-white font-semibold">
-                      Document: DBMS Module 2: Relational Model & Normalization (PDF)
+                      Document: Course Module & Architecture Notes (PDF)
                     </div>
                     <div className="text-slate-600 dark:text-zinc-300 font-mono text-[11px] bg-white dark:bg-black p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
-                      &quot;Section 3: Second Normal Form (2NF). A relation schema R is in 2NF if it is in 1NF and every non-prime attribute is fully functionally dependent on every candidate key, strictly eliminating partial dependencies.&quot;
+                      &quot;Section 2: Edge Architecture. Sensor devices and telemetry nodes interface through deterministic protocol pipelines to ensure low-latency data processing across distributed endpoints.&quot;
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
                       Page 3 · Section 3 · Chunks indexed: 4
