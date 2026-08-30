@@ -8,13 +8,16 @@ export async function GET(req: NextRequest) {
   try {
     const user = await requireFirebaseUser(req);
     const assessments = db.getAssessments().filter(assessment => assessment.teacherId === user.uid);
+    const ownedRooms = assessments
+      .flatMap(assessment => db.getRoomsByAssessmentId(assessment.id))
+      .filter(room => room.teacherId === user.uid);
     const courses = db.getCourses();
     const courseMap = new Map(courses.map((c) => [c.id, c]));
 
     const enrichedAssessments = assessments.map((a) => {
       const course = courseMap.get(a.courseId);
       const attempts = db.getAttemptsByAssessment(a.id);
-      const rooms = db.getRoomsByAssessmentId(a.id);
+      const rooms = ownedRooms.filter(room => room.assessmentId === a.id);
       const activeRoom = rooms.find((r) => r.status === 'ACTIVE') || rooms[0];
 
       let avgScore = 0;
@@ -35,12 +38,20 @@ export async function GET(req: NextRequest) {
         participants: attempts.length,
         averageScore: avgScore,
         roomCode: activeRoom?.code || null,
+        rooms: rooms.map((room) => ({
+          id: room.id,
+          code: room.code,
+          status: room.status,
+          startedAt: room.startedAt,
+          participantCount: db.getAttemptsByRoom(room.id).length,
+        })),
         createdAt: a.createdAt,
       };
     });
 
     return NextResponse.json({
       success: true,
+      account: { uid: user.uid, email: user.email },
       assessments: enrichedAssessments,
     });
   } catch (err: any) {

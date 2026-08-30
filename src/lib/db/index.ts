@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { Collection, MongoClient } from 'mongodb';
 import {
   User,
   Course,
@@ -33,10 +34,16 @@ const DB_FILE = path.join(DATA_DIR, 'assessly_db.json');
 class DatabaseStore {
   private data: DatabaseSchema;
   private isInitialized = false;
+  private mongoCollection: Collection<DatabaseSchema> | null = null;
+  private mongoReady: Promise<void> = Promise.resolve();
 
   constructor() {
     this.data = this.getDefaultState();
     this.init();
+  }
+
+  async ready(): Promise<void> {
+    await this.mongoReady;
   }
 
   private getDefaultState(): DatabaseSchema {
@@ -49,6 +56,12 @@ class DatabaseStore {
 
   private init() {
     if (this.isInitialized) return;
+
+    const mongoUri = process.env.MONGODB_URI?.trim();
+    if (mongoUri) {
+      this.mongoReady = this.initMongo(mongoUri);
+      return;
+    }
 
     try {
       if (!fs.existsSync(DATA_DIR)) {
@@ -77,7 +90,39 @@ class DatabaseStore {
     }
   }
 
+  private async initMongo(uri: string): Promise<void> {
+    const client = new MongoClient(uri, { serverSelectionTimeoutMS: 5000 });
+    await client.connect();
+    this.mongoCollection = client.db(process.env.MONGODB_DB || 'quizsom').collection<DatabaseSchema>('workspace');
+    const stored = await this.mongoCollection.findOne({ _id: 'primary' } as any);
+    if (stored) {
+      const { _id, ...workspace } = stored as DatabaseSchema & { _id?: unknown };
+      this.data = workspace;
+    } else if (fs.existsSync(DB_FILE)) {
+      this.data = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')) as DatabaseSchema;
+      await this.persistMongo();
+    } else {
+      this.data = this.getDefaultState();
+      await this.persistMongo();
+    }
+    this.isInitialized = true;
+    console.log('[QuizSom] MongoDB persistence connected.');
+  }
+
+  private async persistMongo() {
+    if (!this.mongoCollection) return;
+    await this.mongoCollection.replaceOne(
+      { _id: 'primary' } as any,
+      { ...this.data, _id: 'primary' } as any,
+      { upsert: true }
+    );
+  }
+
   private save() {
+    if (process.env.MONGODB_URI) {
+      void this.persistMongo().catch((err) => console.error('MongoDB persistence error:', err));
+      return;
+    }
     try {
       if (!fs.existsSync(DATA_DIR)) {
         fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -249,6 +294,14 @@ class DatabaseStore {
     }
     this.save();
     return room;
+  }
+
+  deleteRoom(roomId: string): boolean {
+    const before = this.data.rooms.length;
+    this.data.rooms = this.data.rooms.filter((room) => room.id !== roomId);
+    if (this.data.rooms.length === before) return false;
+    this.save();
+    return true;
   }
 
   createRoomForAssessment(assessmentId: string, teacherId: string, customCode?: string): LiveRoom {

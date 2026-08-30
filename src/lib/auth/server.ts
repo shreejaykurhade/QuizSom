@@ -1,7 +1,10 @@
 import { NextRequest } from 'next/server';
+import { db } from '@/lib/db';
 
 export type FirebaseIdentity = { uid: string; email: string; name: string };
 export async function requireFirebaseUser(req: NextRequest): Promise<FirebaseIdentity> {
+  // Mongo must be hydrated before any authenticated API reads or writes.
+  await db.ready();
   const idToken = req.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
   if (!idToken) throw new Error('AUTH_REQUIRED');
   const key = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
