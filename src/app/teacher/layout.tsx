@@ -25,6 +25,9 @@ import {
   User,
 } from 'lucide-react';
 
+import { useAuth } from '@/components/AuthProvider';
+import { useRouter } from 'next/navigation';
+
 interface FacultyProfile {
   name: string;
   department: string;
@@ -34,10 +37,10 @@ interface FacultyProfile {
 }
 
 const DEFAULT_PROFILE: FacultyProfile = {
-  name: 'Dr. Arvind Ramanathan',
+  name: 'Faculty Member',
   department: 'CSE Department',
-  semester: 'Sem 5',
-  email: 'arvind.ramanathan@university.edu',
+  semester: 'Sem 4',
+  email: 'faculty@university.edu',
   photoUrl: '',
 };
 
@@ -47,28 +50,73 @@ export default function TeacherLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuth();
   const [profile, setProfile] = useState<FacultyProfile>(DEFAULT_PROFILE);
   const [isEditing, setIsEditing] = useState(false);
   const [tempProfile, setTempProfile] = useState<FacultyProfile>(DEFAULT_PROFILE);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('quizsom_faculty_profile');
+    if (user) {
+      const googleName =
+        user.displayName ||
+        (user.email
+          ? user.email
+              .split('@')[0]
+              .replace(/[._-]/g, ' ')
+              .replace(/\b\w/g, (c) => c.toUpperCase())
+          : 'Faculty Member');
+      const googleEmail = user.email || '';
+      const googlePhoto = user.photoURL || '';
+
+      const storageKey = `quizsom_faculty_profile_${user.uid}`;
+      const saved = localStorage.getItem(storageKey) || localStorage.getItem('quizsom_faculty_profile');
+      let mergedProfile: FacultyProfile = {
+        name: googleName,
+        department: 'CSE Department',
+        semester: 'Sem 4',
+        email: googleEmail,
+        photoUrl: googlePhoto,
+      };
+
       if (saved) {
-        const parsed = JSON.parse(saved);
-        setProfile(parsed);
-        setTempProfile(parsed);
+        try {
+          const parsed = JSON.parse(saved);
+          mergedProfile = {
+            ...mergedProfile,
+            ...parsed,
+            name: parsed.name && parsed.name !== 'Dr. Arvind Ramanathan' && parsed.name !== 'Faculty Member' ? parsed.name : googleName,
+            email: parsed.email && parsed.email !== 'arvind.ramanathan@university.edu' && parsed.email !== 'faculty@university.edu' ? parsed.email : googleEmail,
+            photoUrl: parsed.photoUrl || googlePhoto,
+          };
+        } catch (e) {
+          console.warn('Error reading saved faculty profile:', e);
+        }
       }
-    } catch (e) {
-      console.warn('Error reading faculty profile from localStorage:', e);
+
+      setProfile(mergedProfile);
+      setTempProfile(mergedProfile);
+    } else {
+      try {
+        const saved = localStorage.getItem('quizsom_faculty_profile');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setProfile(parsed);
+          setTempProfile(parsed);
+        }
+      } catch (e) {
+        console.warn('Error reading faculty profile from localStorage:', e);
+      }
     }
-  }, []);
+  }, [user]);
 
   const handleSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
     setProfile(tempProfile);
     try {
+      const storageKey = user ? `quizsom_faculty_profile_${user.uid}` : 'quizsom_faculty_profile';
+      localStorage.setItem(storageKey, JSON.stringify(tempProfile));
       localStorage.setItem('quizsom_faculty_profile', JSON.stringify(tempProfile));
       window.dispatchEvent(new CustomEvent('faculty-profile-updated', { detail: tempProfile }));
     } catch (e) {
@@ -222,13 +270,17 @@ export default function TeacherLayout({
               <span>Student View</span>
               <ExternalLink className="w-3 h-3 text-slate-400" />
             </Link>
-            <Link
-              href="/"
-              className="hover:text-rose-600 flex items-center gap-1 transition-colors text-[11px] font-medium"
+            <button
+              type="button"
+              onClick={async () => {
+                await logout();
+                router.push('/');
+              }}
+              className="hover:text-rose-600 flex items-center gap-1 transition-colors text-[11px] font-medium cursor-pointer"
             >
               <span>Sign Out</span>
               <LogOut className="w-3 h-3" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
