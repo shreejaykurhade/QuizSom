@@ -16,6 +16,8 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { apiFetch } from '@/lib/auth/apiFetch';
+import { useAuth } from '@/components/AuthProvider';
+import { AuthDialog } from '@/components/AuthModal';
 
 const statusStyle: Record<string, string> = {
   ACTIVE: 'bg-emerald-100 text-emerald-800 border-emerald-200',
@@ -25,29 +27,41 @@ const statusStyle: Record<string, string> = {
 };
 
 export default function TeacherDashboardPage() {
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [account, setAccount] = useState<any>(null);
+  const [authOpen, setAuthOpen] = useState(false);
 
   const load = useCallback(async () => {
     setError('');
     try {
       const response = await apiFetch('/api/assessments');
       const body = await response.json();
-      if (!response.ok) throw new Error(body.error || 'Could not load rooms.');
+      if (!response.ok) {
+        if (body.error === 'Sign in required') {
+          if (authLoading) return;
+          setError('Sign in required');
+          return;
+        }
+        throw new Error(body.error || 'Could not load rooms.');
+      }
       setItems(body.assessments || []);
       setAccount(body.account || null);
     } catch (cause: any) {
+      if (cause.message === 'Sign in required' && authLoading) return;
       setError(cause.message || 'Could not load rooms.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [authLoading]);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!authLoading) {
+      void load();
+    }
+  }, [authLoading, user, load]);
 
   const editRoom = async (code: string) => {
     const newCode = window.prompt('New room code (4–10 letters/numbers):', code);
@@ -124,9 +138,24 @@ export default function TeacherDashboardPage() {
       </div>
 
       {error && (
-        <p className="rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-          {error}
-        </p>
+        <div className="rounded-2xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/40 p-4 text-sm text-rose-800 dark:text-rose-300 flex items-center justify-between">
+          <span>{error}</span>
+          {error.toLowerCase().includes('sign in') && (
+            <AuthDialog
+              initialRole="faculty"
+              open={authOpen}
+              onOpenChange={setAuthOpen}
+              trigger={
+                <button
+                  type="button"
+                  className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all shadow-xs cursor-pointer"
+                >
+                  Sign in
+                </button>
+              }
+            />
+          )}
+        </div>
       )}
 
       {loading ? (

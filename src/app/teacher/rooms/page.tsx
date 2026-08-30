@@ -18,7 +18,10 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/auth/apiFetch';
 
+import { useAuth } from '@/components/AuthProvider';
+
 export default function TeacherRoomsDirectoryPage() {
+  const { user, loading: authLoading } = useAuth();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -39,8 +42,10 @@ export default function TeacherRoomsDirectoryPage() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!authLoading) {
+      void load();
+    }
+  }, [authLoading, user, load]);
 
   const copyRoom = (code: string) => {
     navigator.clipboard.writeText(code);

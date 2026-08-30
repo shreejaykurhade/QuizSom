@@ -16,7 +16,10 @@ import {
 } from 'lucide-react';
 import { apiFetch } from '@/lib/auth/apiFetch';
 
+import { useAuth } from '@/components/AuthProvider';
+
 export default function TeacherResultsDirectoryPage() {
+  const { user, loading: authLoading } = useAuth();
   const [assessments, setAssessments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,8 +39,10 @@ export default function TeacherResultsDirectoryPage() {
   }, []);
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!authLoading) {
+      void load();
+    }
+  }, [authLoading, user, load]);
 
   return (
     <div className="space-y-7 max-w-5xl mx-auto pb-16">
