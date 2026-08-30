@@ -362,7 +362,7 @@ export default function LandingPage() {
                         <Image src="/gemini-star.png" alt="Gemini" width={16} height={16} className="object-contain" unoptimized />
                       </div>
                       <span className="text-slate-700 dark:text-zinc-300">
-                        <strong className="text-slate-900 dark:text-white">AI Pedagogical Insight:</strong> Students showed 88% retention on 1NF/2NF definitions, but 61% accuracy on 3NF vs BCNF dependency preservation trade-offs.
+                        <strong className="text-slate-900 dark:text-white">AI Pedagogical Insights:</strong> Source-grounded concept mastery and cognitive friction analysis generated dynamically from student assessment attempts.
                       </span>
                     </div>
                     <Link href="/teacher/dashboard" className="text-blue-600 dark:text-zinc-200 font-bold hover:underline shrink-0 ml-4">

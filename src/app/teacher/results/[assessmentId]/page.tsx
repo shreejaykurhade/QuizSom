@@ -161,21 +161,6 @@ export default function TeacherResultsAnalyticsPage() {
       {/* TAB 1: OVERVIEW & SCORE DISTRIBUTION */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          <div className="p-6 rounded-2xl bg-gradient-to-r from-indigo-50/70 via-white to-slate-50 border border-indigo-100 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-mono font-bold text-indigo-700 uppercase tracking-wider flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-indigo-600" />
-                Gemini Pedagogical Analysis
-              </div>
-              <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 font-bold">
-                Source Grounded
-              </span>
-            </div>
-            <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-medium">
-              {analytics?.geminiPedagogicalInsights}
-            </p>
-          </div>
-
           <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4">
             <h2 className="text-sm font-bold text-slate-900">Class Score Distribution Histogram</h2>
             <div className="space-y-3 pt-2">
