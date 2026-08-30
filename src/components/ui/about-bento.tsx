@@ -114,10 +114,10 @@ export function AboutBento() {
               <h3 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-tight">
                 Study Drills.
                 <br />
-                <span className="text-slate-500 dark:text-zinc-400">Peer Battles.</span>
+                <span className="text-slate-800 dark:text-zinc-200">Peer Battles.</span>
               </h3>
 
-              <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed max-w-md font-normal">
+              <p className="text-xs sm:text-sm text-black dark:text-white leading-relaxed max-w-md font-medium opacity-100">
                 Upload your own PDF lecture notes or enter any academic topic to generate AI peer challenge quizzes. Share instant 6-character room codes with classmates and compete on the live student leaderboard.
               </p>
             </div>
