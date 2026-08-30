@@ -195,6 +195,8 @@ export function AuthFormContent({ initialRole = 'faculty', onSuccess, isModal = 
             </Label>
             <Input
               id={`${id}-name`}
+              name="name"
+              autoComplete="name"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -210,6 +212,8 @@ export function AuthFormContent({ initialRole = 'faculty', onSuccess, isModal = 
           </Label>
           <Input
             id={`${id}-email`}
+            name="email"
+            autoComplete="email"
             required
             type="email"
             value={email}
@@ -225,6 +229,8 @@ export function AuthFormContent({ initialRole = 'faculty', onSuccess, isModal = 
           </Label>
           <Input
             id={`${id}-password`}
+            name="password"
+            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
             required
             minLength={6}
             type="password"
