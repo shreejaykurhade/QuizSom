@@ -934,5 +934,8 @@ class DatabaseStore {
 
 // Global Singleton for development and serverless hot-reloads
 const globalForDb = global as unknown as { assesslyDbInstance?: DatabaseStore };
+if (globalForDb.assesslyDbInstance) {
+  Object.setPrototypeOf(globalForDb.assesslyDbInstance, DatabaseStore.prototype);
+}
 export const db = globalForDb.assesslyDbInstance || new DatabaseStore();
 if (process.env.NODE_ENV !== 'production') globalForDb.assesslyDbInstance = db;
