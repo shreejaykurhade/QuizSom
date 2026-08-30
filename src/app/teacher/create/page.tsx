@@ -477,7 +477,7 @@ export default function CreateAssessmentWizard() {
                     ref={fileInputRef}
                     type="file"
                     multiple
-                    accept=".pdf,.docx,.txt"
+                    accept=".pdf,.pptx,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                     onChange={(e) => handleFilesUpload(e.target.files)}
                     disabled={isUploading}
                     className="hidden"

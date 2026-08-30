@@ -2,13 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { processDocumentBuffer } from '@/lib/rag/documentProcessor';
 import { requireFirebaseUser } from '@/lib/auth/server';
-import fs from 'fs';
-import path from 'path';
 import { indexDocumentChunks } from '@/lib/rag/embeddings';
 
 export async function POST(req: NextRequest) {
   try {
     const user = await requireFirebaseUser(req);
+    await db.ready();
     const formData = await req.formData();
     const courseId = (formData.get('courseId') as string) || `course_${user.uid}`;
 
@@ -35,11 +34,7 @@ export async function POST(req: NextRequest) {
           courseId
         );
         docMaterial.ownerId = user.uid;
-        const uploadDirectory = path.join(process.cwd(), '.data', 'uploads');
-        fs.mkdirSync(uploadDirectory, { recursive: true });
-        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-        docMaterial.storagePath = path.join(uploadDirectory, `${docMaterial.id}-${safeName}`);
-        fs.writeFileSync(docMaterial.storagePath, buffer);
+        docMaterial.storagePath = await db.saveDocumentFile(docMaterial.id, file.name, file.type || 'application/octet-stream', buffer);
         docMaterial = await indexDocumentChunks(docMaterial);
 
         db.saveDocument(docMaterial);

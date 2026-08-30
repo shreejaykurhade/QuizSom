@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { Collection, MongoClient } from 'mongodb';
+import { Collection, GridFSBucket, MongoClient } from 'mongodb';
 import {
   User,
   Course,
@@ -35,6 +35,7 @@ class DatabaseStore {
   private data: DatabaseSchema;
   private isInitialized = false;
   private mongoCollection: Collection<DatabaseSchema> | null = null;
+  private fileBucket: GridFSBucket | null = null;
   private mongoReady: Promise<void> = Promise.resolve();
 
   constructor() {
@@ -94,7 +95,9 @@ class DatabaseStore {
     try {
       const client = new MongoClient(uri, { serverSelectionTimeoutMS: 3000 });
       await client.connect();
-      this.mongoCollection = client.db(process.env.MONGODB_DB || 'quizsom').collection<DatabaseSchema>('workspace');
+      const mongoDb = client.db(process.env.MONGODB_DB || 'quizsom');
+      this.mongoCollection = mongoDb.collection<DatabaseSchema>('workspace');
+      this.fileBucket = new GridFSBucket(mongoDb, { bucketName: 'materialFiles' });
       const stored = await this.mongoCollection.findOne({ _id: 'primary' } as any);
       if (stored) {
         const { _id, ...workspace } = stored as DatabaseSchema & { _id?: unknown };
@@ -111,6 +114,7 @@ class DatabaseStore {
     } catch (err: any) {
       console.warn('[QuizSom] MongoDB connection warning, falling back to local file storage:', err.message);
       this.mongoCollection = null;
+      this.fileBucket = null;
       if (fs.existsSync(DB_FILE)) {
         this.data = JSON.parse(fs.readFileSync(DB_FILE, 'utf-8')) as DatabaseSchema;
       } else {
@@ -118,6 +122,47 @@ class DatabaseStore {
       }
       this.isInitialized = true;
     }
+  }
+
+  async saveDocumentFile(documentId: string, fileName: string, mimeType: string, buffer: Buffer): Promise<string> {
+    await this.ready();
+    if (this.fileBucket) {
+      const previous = await this.fileBucket.find({ 'metadata.documentId': documentId }).toArray();
+      await Promise.all(previous.map((file) => this.fileBucket!.delete(file._id)));
+      await new Promise<void>((resolve, reject) => {
+        const stream = this.fileBucket!.openUploadStream(fileName, {
+          metadata: { documentId, mimeType },
+        });
+        stream.once('finish', () => resolve());
+        stream.once('error', reject);
+        stream.end(buffer);
+      });
+      return `gridfs:${documentId}`;
+    }
+
+    const uploadDirectory = path.join(DATA_DIR, 'uploads');
+    fs.mkdirSync(uploadDirectory, { recursive: true });
+    const safeName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+    const storagePath = path.join(uploadDirectory, `${documentId}-${safeName}`);
+    fs.writeFileSync(storagePath, buffer);
+    return storagePath;
+  }
+
+  async getDocumentFile(document: DocumentMaterial): Promise<Buffer | null> {
+    await this.ready();
+    if (document.storagePath?.startsWith('gridfs:') && this.fileBucket) {
+      const stored = await this.fileBucket.find({ 'metadata.documentId': document.id }).sort({ uploadDate: -1 }).next();
+      if (!stored) return null;
+      return new Promise<Buffer>((resolve, reject) => {
+        const chunks: Buffer[] = [];
+        const stream = this.fileBucket!.openDownloadStream(stored._id);
+        stream.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+        stream.once('end', () => resolve(Buffer.concat(chunks)));
+        stream.once('error', reject);
+      });
+    }
+    if (document.storagePath && fs.existsSync(document.storagePath)) return fs.readFileSync(document.storagePath);
+    return null;
   }
 
   private async persistMongo() {

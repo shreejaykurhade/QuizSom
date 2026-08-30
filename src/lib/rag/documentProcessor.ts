@@ -1,4 +1,5 @@
 import { DocumentChunk, DocumentMaterial } from '../db/types';
+import JSZip from 'jszip';
 
 export interface ProcessedDocumentResult {
   title: string;
@@ -86,6 +87,41 @@ export function cleanPdfText(raw: string): string {
   return text.trim();
 }
 
+function decodeOfficeXml(value: string) {
+  return value
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'");
+}
+
+async function extractOpenXmlText(buffer: Buffer, kind: 'pptx' | 'docx') {
+  const archive = await JSZip.loadAsync(buffer);
+  if (kind === 'pptx') {
+    const slides = Object.keys(archive.files)
+      .filter((name) => /^ppt\/slides\/slide\d+\.xml$/.test(name))
+      .sort((a, b) => Number(a.match(/slide(\d+)/)?.[1]) - Number(b.match(/slide(\d+)/)?.[1]));
+    const pages = await Promise.all(slides.map(async (name, index) => {
+      const xml = await archive.file(name)!.async('text');
+      const text = Array.from(xml.matchAll(/<a:t[^>]*>([\s\S]*?)<\/a:t>/g))
+        .map((match) => decodeOfficeXml(match[1]))
+        .join('\n');
+      return `[[PAGE ${index + 1}]]\n${text}`;
+    }));
+    return { text: pages.join('\n\n'), pageCount: Math.max(1, pages.length) };
+  }
+
+  const documentXml = archive.file('word/document.xml');
+  if (!documentXml) throw new Error('The DOCX file does not contain a readable document body');
+  const xml = await documentXml.async('text');
+  const withParagraphs = xml.replace(/<\/w:p>/g, '\n\n').replace(/<w:tab\/>/g, ' ');
+  const text = Array.from(withParagraphs.matchAll(/<w:t[^>]*>([\s\S]*?)<\/w:t>|(\n\n)/g))
+    .map((match) => match[2] || decodeOfficeXml(match[1] || ''))
+    .join('');
+  return { text, pageCount: Math.max(1, Math.ceil(text.split(/\s+/).length / 400)) };
+}
+
 export async function processDocumentBuffer(
   buffer: Buffer,
   fileName: string,
@@ -115,6 +151,16 @@ export async function processDocumentBuffer(
       console.warn('PDF parse fallback to text decoding:', err);
       rawText = buffer.toString('utf-8');
     }
+  } else if (mimeType === 'application/vnd.openxmlformats-officedocument.presentationml.presentation' || fileName.toLowerCase().endsWith('.pptx')) {
+    const extracted = await extractOpenXmlText(buffer, 'pptx');
+    rawText = extracted.text;
+    pageCount = extracted.pageCount;
+  } else if (mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' || fileName.toLowerCase().endsWith('.docx')) {
+    const extracted = await extractOpenXmlText(buffer, 'docx');
+    rawText = extracted.text;
+    pageCount = extracted.pageCount;
+  } else if (fileName.toLowerCase().endsWith('.ppt')) {
+    throw new Error('Legacy .ppt files are not supported. Save the presentation as .pptx and upload it again.');
   } else {
     rawText = buffer.toString('utf-8');
     const words = rawText.split(/\s+/).length;

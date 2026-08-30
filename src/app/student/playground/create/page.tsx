@@ -371,7 +371,7 @@ export default function CreatePlaygroundQuizPage() {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf,application/pdf"
+                accept=".pdf,.pptx,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                 multiple
                 className="hidden"
                 onChange={handleFileUpload}

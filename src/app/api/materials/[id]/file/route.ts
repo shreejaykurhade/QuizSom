@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import fs from 'fs';
 import { db } from '@/lib/db';
 import { requireFirebaseUser } from '@/lib/auth/server';
 
@@ -32,15 +31,15 @@ export async function GET(
       );
     }
 
-    if (!document.storagePath || !fs.existsSync(document.storagePath)) {
+    const fileBuffer = await db.getDocumentFile(document);
+    if (!fileBuffer) {
       return NextResponse.json(
         { error: 'Original file unavailable on server storage.' },
         { status: 404 }
       );
     }
 
-    const fileBuffer = fs.readFileSync(document.storagePath);
-    return new NextResponse(fileBuffer, {
+    return new NextResponse(new Blob([new Uint8Array(fileBuffer)]), {
       headers: {
         'Content-Type': document.mimeType || 'application/pdf',
         'Content-Disposition': `inline; filename="${encodeURIComponent(document.fileName)}"`,
