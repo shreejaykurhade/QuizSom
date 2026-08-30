@@ -5,33 +5,46 @@ import { processDocumentBuffer } from '@/lib/rag/documentProcessor';
 export async function POST(req: NextRequest) {
   try {
     const formData = await req.formData();
-    const file = formData.get('file') as File | null;
     const courseId = (formData.get('courseId') as string) || 'course_dbms_301';
 
-    if (!file) {
-      return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+    // Retrieve all files from multi-file or folder uploads
+    const files = (formData.getAll('files') as File[]).concat(
+      formData.getAll('file') as File[]
+    ).filter(Boolean);
+
+    if (!files || files.length === 0) {
+      return NextResponse.json({ error: 'No files uploaded' }, { status: 400 });
     }
 
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const processedDocs = [];
 
-    const docMaterial = await processDocumentBuffer(
-      buffer,
-      file.name,
-      file.type || 'application/pdf',
-      courseId
-    );
+    for (const file of files) {
+      if (file && typeof file.arrayBuffer === 'function') {
+        const arrayBuffer = await file.arrayBuffer();
+        const buffer = Buffer.from(arrayBuffer);
 
-    db.saveDocument(docMaterial);
+        const docMaterial = await processDocumentBuffer(
+          buffer,
+          file.name,
+          file.type || 'application/pdf',
+          courseId
+        );
+
+        db.saveDocument(docMaterial);
+        processedDocs.push(docMaterial);
+      }
+    }
 
     return NextResponse.json({
       success: true,
-      document: docMaterial,
+      documents: processedDocs,
+      document: processedDocs[0] || null,
+      totalUploaded: processedDocs.length,
     });
   } catch (err: any) {
     console.error('Document upload error:', err);
     return NextResponse.json(
-      { error: err.message || 'Failed to process document' },
+      { error: err.message || 'Failed to process document(s)' },
       { status: 500 }
     );
   }

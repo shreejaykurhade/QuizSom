@@ -8,6 +8,84 @@ export interface ProcessedDocumentResult {
   topics: string[];
 }
 
+/**
+ * Aggressively cleans PDF-extracted text by removing:
+ * - Recurring slide/page headers (e.g. "Yogita Borse 3", "Created by Prof")
+ * - Author lines with websites/emails (e.g. "Tushar B. Kute, http://tusharkute.com")
+ * - Dates, URLs, publisher metadata
+ * - Non-printable characters and PDF artifacts
+ * - Standalone page/slide numbers
+ * - Formatting noise and bullet symbols
+ */
+export function cleanPdfText(raw: string): string {
+  if (!raw) return '';
+
+  // Step 1: Remove non-printable / PDF binary garbage
+  let text = raw
+    .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, '')
+    .replace(/[\u2588\u25A0\uFFFD\uFEFF]/g, '')
+    // Remove Private Use Area characters (PDF bullet symbols like U+F0A8, U+F0B7, etc.)
+    .replace(/[\uE000-\uF8FF]/g, '')
+    // Replace common PDF bullet symbols with a clean standard separator
+    .replace(/[\u2022\u2023\u25E6\u2043\u2219\u25AA\u25AB\u25CF\u25CB]/g, '\n• ')
+    .replace(/[]/g, '\n• ');
+
+  // Step 2: Normalize line endings
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+
+  // Step 3: Remove author + website / email combos (e.g. "Tushar B. Kute, http://tusharkute.com")
+  text = text.replace(/^[A-Z][a-zA-Z\s.,]+(?:http[s]?:\/\/\S+|www\.\S+|[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}).*$/gim, '');
+  text = text.replace(/(?:by\s+)?[A-Z][a-zA-Z\s.,]+\s*,\s*(?:http[s]?:\/\/\S+|www\.\S+)/gi, '');
+
+  // Step 4: Remove recurring slide headers like "1/1/2019 Created by Prof. Yogita Borse 3"
+  text = text.replace(/\d{1,2}\/\d{1,2}\/\d{2,4}\s+Created\s+by\s+[A-Za-z.\s]+\d*\s*/gi, '');
+
+  // Step 5: Remove standalone "Created by Prof..." lines
+  text = text.replace(/^Created\s+by\s+.{2,60}$/gim, '');
+
+  // Step 6: Remove source attribution lines (From: Book By – Author www.site.com)
+  text = text.replace(/^From\s*:\s*.+$/gim, '');
+  text = text.replace(/^By\s*[–-]\s*.+$/gim, '');
+  text = text.replace(/^Author\s*:\s*.+$/gim, '');
+
+  // Step 7: Remove standalone URLs and web addresses
+  text = text.replace(/^(https?:\/\/|www\.)\S+\s*$/gim, '');
+  text = text.replace(/(https?:\/\/|www\.)\S+/gi, '');
+
+  // Step 8: Remove standalone dates like "1/1/2019"
+  text = text.replace(/^\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s*$/gm, '');
+
+  // Step 9: Remove standalone page/slide numbers
+  text = text.replace(/^\s*\d{1,3}\s*$/gm, '');
+
+  // Step 10: Remove repeated header-like patterns (Author Name + Number on its own line)
+  text = text.replace(/^[A-Z][a-z]+\s+[A-Z][a-z]+\s+\d{1,3}\s*$/gm, '');
+
+  // Step 11: Remove "Slide X", "Page X of Y", "--- PAGE X ---"
+  text = text.replace(/^(?:slide|page)\s+\d+(\s+of\s+\d+)?\s*$/gim, '');
+  text = text.replace(/^---\s*PAGE\s+\d+\s*---$/gim, '');
+
+  // Step 12: Merge broken hyphenated words at line ends
+  text = text.replace(/(\w+)-\s*\n\s*(\w+)/g, '$1$2');
+
+  // Step 13: Convert bullets into coherent sentences
+  // e.g. "• Benefits : increased efficiency" -> "Benefits include: increased efficiency"
+  text = text.replace(/^\s*•\s*/gm, '');
+
+  // Step 14: Collapse excessive whitespace
+  text = text.replace(/[ \t]+/g, ' ');
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // Step 15: Remove lines that are just whitespace or single characters
+  text = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 2)
+    .join('\n');
+
+  return text.trim();
+}
+
 export async function processDocumentBuffer(
   buffer: Buffer,
   fileName: string,
@@ -19,7 +97,6 @@ export async function processDocumentBuffer(
 
   if (mimeType === 'application/pdf' || fileName.toLowerCase().endsWith('.pdf')) {
     try {
-      // Dynamic import of pdf-parse
       const pdfParse = require('pdf-parse');
       const pdfData = await pdfParse(buffer);
       rawText = pdfData.text || '';
@@ -30,13 +107,12 @@ export async function processDocumentBuffer(
     }
   } else {
     rawText = buffer.toString('utf-8');
-    // Estimate pages based on word count (~400 words per page)
     const words = rawText.split(/\s+/).length;
     pageCount = Math.max(1, Math.ceil(words / 400));
   }
 
-  // Clean raw text
-  rawText = rawText.replace(/\r\n/g, '\n').trim();
+  // Thorough clean of extracted text
+  rawText = cleanPdfText(rawText);
 
   // Create clean chunks
   const chunks = chunkDocumentText(rawText, pageCount);
@@ -44,6 +120,7 @@ export async function processDocumentBuffer(
 
   const cleanTitle = fileName
     .replace(/\.[^/.]+$/, '')
+    .replace(/^[0-9]+[._\s-]*/, '') // Remove leading numbers like "39. "
     .replace(/[_-]/g, ' ')
     .trim();
 
@@ -66,24 +143,42 @@ export async function processDocumentBuffer(
 }
 
 export function chunkDocumentText(text: string, totalPages: number): DocumentChunk[] {
-  const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim().length > 20);
+  const paragraphs = text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter((p) => p.length > 25);
+
   const chunks: DocumentChunk[] = [];
-  const chunkSize = 400; // ~400 words per chunk
+  const chunkSize = 350;
 
   let currentChunkText = '';
   let chunkIndex = 0;
-  const paragraphsPerPage = Math.max(1, Math.ceil(paragraphs.length / totalPages));
+  const paragraphsPerPage = Math.max(1, Math.ceil(paragraphs.length / Math.max(1, totalPages)));
 
   paragraphs.forEach((para, pIdx) => {
-    currentChunkText += para.trim() + '\n\n';
+    currentChunkText += para + '\n\n';
     const wordCount = currentChunkText.split(/\s+/).length;
 
     if (wordCount >= chunkSize || pIdx === paragraphs.length - 1) {
       const pageNumber = Math.min(totalPages, Math.max(1, Math.floor(pIdx / paragraphsPerPage) + 1));
-      
-      // Attempt section detection
-      const firstLine = para.trim().split('\n')[0].replace(/[#*_-]/g, '').trim();
-      const sectionTitle = firstLine.length > 5 && firstLine.length < 60 ? firstLine : undefined;
+
+      // Extract section title from the first heading-like line
+      const lines = currentChunkText.trim().split('\n');
+      let sectionTitle = '';
+      for (const line of lines) {
+        const clean = line.replace(/^[#*_\-\d.\s]+/, '').trim();
+        if (
+          clean.length > 4 &&
+          clean.length < 80 &&
+          !clean.includes('...') &&
+          !clean.includes('www.') &&
+          !/^(page|slide|module|chapter|unit)\s*\d*$/i.test(clean)
+        ) {
+          sectionTitle = clean;
+          break;
+        }
+      }
+      if (!sectionTitle) sectionTitle = 'Core Curriculum Material';
 
       chunks.push({
         id: `chunk_${Date.now()}_${chunkIndex}`,
@@ -100,48 +195,49 @@ export function chunkDocumentText(text: string, totalPages: number): DocumentChu
     }
   });
 
-  if (chunks.length === 0 && text.trim().length > 0) {
-    chunks.push({
-      id: `chunk_${Date.now()}_0`,
-      documentId: '',
-      chunkIndex: 0,
-      pageNumber: 1,
-      content: text.slice(0, 2000),
-      tokenEstimate: Math.round(text.slice(0, 2000).split(/\s+/).length * 1.3),
-    });
-  }
-
   return chunks;
 }
 
 export function extractKeyTopics(text: string): string[] {
-  const commonKeywords = [
-    'Relational Model',
-    'Functional Dependencies',
-    'Normalization',
-    '1NF & 2NF',
-    '3NF & BCNF',
-    'Lossless Decomposition',
-    'Entity Integrity',
-    'Referential Integrity',
-    'Transaction Management',
-    'ACID Properties',
-    'Concurrency Control',
-    'Indexing & B-Trees',
-    'SQL Query Optimization',
-    'Database Security',
-  ];
+  const lines = text.split('\n');
+  const candidates: string[] = [];
 
-  const foundTopics: string[] = [];
-  commonKeywords.forEach((kw) => {
-    if (new RegExp(`\\b${kw}\\b`, 'i').test(text)) {
-      foundTopics.push(kw);
+  lines.forEach((line) => {
+    const trimmed = line.trim();
+    if (
+      (trimmed.startsWith('Module') ||
+        trimmed.startsWith('Chapter') ||
+        trimmed.startsWith('Unit') ||
+        trimmed.startsWith('Section') ||
+        /^\d+\.\s+[A-Z]/.test(trimmed)) &&
+      trimmed.length < 80
+    ) {
+      const clean = trimmed.replace(/^[#*_\s]+/, '').trim();
+      if (clean.length > 5 && !clean.includes('...')) {
+        candidates.push(clean);
+      }
     }
   });
 
-  if (foundTopics.length === 0) {
-    return ['Foundational Concepts', 'Core Principles', 'Applied Theory'];
+  if (candidates.length > 0) {
+    return Array.from(new Set(candidates)).slice(0, 8);
   }
 
-  return foundTopics.slice(0, 6);
+  // Fallback: extract capitalized heading phrases
+  const headingMatches = text.match(/^[A-Z][A-Za-z\s&,\-]{5,50}$/gm);
+  if (headingMatches && headingMatches.length > 0) {
+    const valid = headingMatches
+      .map((h) => h.trim())
+      .filter((h) => h.length > 6 && !h.startsWith('PAGE') && !h.startsWith('SLIDE'));
+    if (valid.length > 0) {
+      return Array.from(new Set(valid)).slice(0, 6);
+    }
+  }
+
+  return [
+    'Core Concepts & Terminology',
+    'Architectural Principles',
+    'Protocols & Mechanisms',
+    'Analysis & Implementations',
+  ];
 }

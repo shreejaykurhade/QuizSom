@@ -607,8 +607,8 @@ export const SEED_ASSESSMENT: Assessment = {
 };
 
 export const SEED_ROOM: LiveRoom = {
-  id: 'room_demo_26',
-  code: 'DEMO26',
+  id: 'room_cs301a',
+  code: 'CS301A',
   assessmentId: 'assess_dbms_ia01',
   teacherId: 'user_prof_arvind',
   status: 'ACTIVE',
@@ -722,7 +722,7 @@ export function generateSeedAttempts(): ExamAttempt[] {
 
     return {
       id: `attempt_${idx}`,
-      roomId: 'room_demo_26',
+      roomId: 'room_cs301a',
       assessmentId: 'assess_dbms_ia01',
       studentId: `std_${s.roll}`,
       studentName: s.name,

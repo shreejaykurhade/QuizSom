@@ -116,7 +116,7 @@ export interface Assessment {
 
 export interface LiveRoom {
   id: string;
-  code: string; // 6 characters, e.g. "IA26X7", "DEMO26"
+  code: string; // 6 characters, e.g. "CS301A", "IA26X7"
   assessmentId: string;
   teacherId: string;
   status: RoomStatus;

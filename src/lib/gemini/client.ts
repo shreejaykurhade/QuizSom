@@ -1,8 +1,10 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { Question, DocumentMaterial, QuestionDifficulty } from '../db/types';
+import { Question, DocumentMaterial, QuestionDifficulty, DocumentChunk } from '../db/types';
+import { cleanPdfText } from '../rag/documentProcessor';
 
 export interface GenerateQuizRequest {
-  document: DocumentMaterial;
+  document?: DocumentMaterial;
+  documents?: DocumentMaterial[];
   courseId: string;
   assessmentTitle: string;
   totalQuestions: number;
@@ -27,56 +29,85 @@ export interface GeneratedQuestionItem {
   };
 }
 
+// ─── Concept types for multi-pattern extraction ───
+type ConceptType = 'DEFINITION' | 'PROPERTY' | 'COMPARISON' | 'PROCESS' | 'EXAMPLE' | 'FEATURE' | 'FACT';
+
+interface ExtractedConcept {
+  type: ConceptType;
+  subject: string;
+  predicate: string;
+  fullSentence: string;
+  docTitle: string;
+  pageNumber: number;
+  sectionTitle: string;
+  quality: number; // 0-100 informativeness score
+}
+
+// ─── Stopwords & invalid single-word subjects ───
+const SKIP_SUBJECTS = new Set([
+  'this', 'that', 'it', 'they', 'the', 'a', 'an', 'for', 'in', 'on', 'at', 'to', 'of',
+  'with', 'by', 'from', 'as', 'but', 'or', 'and', 'not', 'if', 'so', 'do', 'be',
+  'easy', 'difficult', 'hard', 'simple', 'new', 'old', 'also', 'each', 'these', 'those',
+  'some', 'many', 'more', 'most', 'such', 'very', 'all', 'any', 'both', 'other', 'same',
+  'however', 'therefore', 'thus', 'hence', 'since', 'because', 'although', 'while',
+  'above', 'below', 'here', 'there', 'where', 'when', 'how', 'what', 'which', 'who',
+  'following', 'example', 'figure', 'table', 'note', 'important', 'reason', 'the reason',
+  'provides', 'uses', 'allows', 'consists', 'means', 'type', 'types', 'way', 'ways',
+  'fact', 'facts', 'problem', 'benefit', 'benefits', 'feature', 'features', 'scenario',
+  'eventually', 'moreover', 'furthermore', 'additionally', 'consequently',
+]);
+
 export class GeminiAssessmentEngine {
+  private apiKeyStatus: 'UNTESTED' | 'VALID' | 'INVALID' = 'UNTESTED';
+
   private getApiKey(): string | null {
     const key = process.env.GEMINI_API_KEY || null;
     return key && key.trim().length > 5 ? key.trim() : null;
   }
 
   private getGenAI(): GoogleGenerativeAI | null {
+    if (this.apiKeyStatus === 'INVALID') return null;
     const apiKey = this.getApiKey();
-    if (apiKey) {
-      return new GoogleGenerativeAI(apiKey);
-    }
+    if (apiKey) return new GoogleGenerativeAI(apiKey);
     return null;
   }
 
   isLiveGeminiEnabled(): boolean {
-    return Boolean(this.getApiKey());
+    return Boolean(this.getApiKey()) && this.apiKeyStatus !== 'INVALID';
   }
 
   async generateQuestions(req: GenerateQuizRequest): Promise<Question[]> {
     const genAI = this.getGenAI();
     if (genAI) {
       try {
-        console.log('Invoking Live Gemini Flash generation with API Key...');
-        // Try active Gemini models
+        console.log('[QuizSom] Attempting Gemini API generation...');
         const modelNames = [
-          'gemini-2.5-flash',
-          'gemini-2.5-pro',
           'gemini-3.6-flash',
-          'gemini-1.5-flash-latest',
-          'gemini-1.5-pro-latest',
-          'gemini-pro',
+          'gemini-3.5-flash',
+          'gemini-3.7-flash',
+          'gemini-flash-latest',
         ];
         for (const modelName of modelNames) {
           try {
             const liveQuestions = await this.callLiveGemini(genAI, modelName, req);
             if (liveQuestions && liveQuestions.length > 0) {
-              console.log(`Successfully generated ${liveQuestions.length} questions using ${modelName}`);
+              console.log(`[QuizSom] ✓ Generated ${liveQuestions.length} questions via ${modelName}`);
+              this.apiKeyStatus = 'VALID';
               return this.validateAndFormatQuestions(liveQuestions, req.courseId);
             }
-          } catch (modelErr) {
-            console.warn(`Model ${modelName} failed, trying next:`, modelErr);
+          } catch (modelErr: any) {
+            const errMsg = modelErr?.message || '';
+            console.warn(`[QuizSom] Model ${modelName} attempt:`, errMsg.slice(0, 120));
           }
         }
-      } catch (err) {
-        console.warn('Gemini Live API error, failing over to high-precision RAG generator:', err);
+      } catch (err: any) {
+        console.warn('[QuizSom] Gemini API error:', err?.message?.slice(0, 120));
       }
+    } else {
+      console.log('[QuizSom] No valid Gemini API key. Using local RAG generator.');
     }
 
-    // High precision fallback RAG generator grounded in the uploaded document
-    return this.generateGroundedRAGQuestions(req);
+    return this.generateLocalRAGQuestions(req);
   }
 
   private async callLiveGemini(
@@ -86,65 +117,70 @@ export class GeminiAssessmentEngine {
   ): Promise<GeneratedQuestionItem[]> {
     const model = genAI.getGenerativeModel({
       model: modelName,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        temperature: 0.2,
-      },
+      generationConfig: { responseMimeType: 'application/json', temperature: 0.15 },
     });
 
-    const contextText = req.document.rawText.slice(0, 18000);
-    const prompt = `
-You are an expert university professor creating an academic internal assessment on QuizSom from the provided course material.
+    const docs = (req.documents && req.documents.length > 0)
+      ? req.documents
+      : req.document ? [req.document] : [];
 
-MATERIAL CONTEXT:
-Document Title: ${req.document.title}
-Total Pages: ${req.document.pageCount}
-Content:
+    const totalTarget = Math.max(1, req.totalQuestions);
+    const questionsPerDoc = Math.max(1, Math.ceil(totalTarget / Math.max(1, docs.length)));
+
+    const contextText = docs
+      .map((d, idx) => {
+        const cleaned = cleanPdfText(d.rawText);
+        return `================================================================================
+DOCUMENT #${idx + 1}: "${d.title}" (${d.pageCount} pages)
+Generate ~${questionsPerDoc} questions from this document
+================================================================================
+${cleaned.slice(0, 25000)}`;
+      })
+      .join('\n\n');
+
+    const prompt = `You are creating a university-level multiple-choice quiz from the provided course material.
+
+MATERIAL:
 ${contextText}
 
-GENERATION INSTRUCTIONS:
-1. Generate ${req.totalQuestions} rigorous, unambiguous multiple-choice questions.
-2. Ground all questions strictly in the provided material. Do not invent external facts.
-3. Every question must have exactly 4 distinct options with IDs: "opt_1", "opt_2", "opt_3", "opt_4".
-4. Set "correctOptionId" to the exact correct option ID.
-5. Provide a clear, educational explanation.
-6. Provide an accurate sourceCitation with documentTitle ("${req.document.title}"), pageNumber (between 1 and ${req.document.pageCount}), sectionTitle, and a direct excerpt from the text.
-7. Set difficulty to: ${req.difficulty === 'mixed' ? 'a realistic mix of easy, medium, and hard' : req.difficulty}.
-8. Return a JSON object with a single "questions" array matching this exact schema:
+RULES:
+1. Generate exactly ${totalTarget} questions.
+2. Every question and answer MUST come directly from the text above. Do NOT use external knowledge.
+3. Distribute questions across ALL chapters/sections in the material evenly.
+4. Write clear, natural academic questions. Do NOT include author names, dates, slide numbers, or URLs in questions.
+5. Each question has exactly 4 options (opt_1 through opt_4). One correct, three plausible distractors from the same text.
+6. Difficulty: ${req.difficulty === 'mixed' ? 'mix of easy, medium, and hard' : req.difficulty}.
+7. Include sourceCitation with the document title, page number, section, and a verbatim excerpt proving the answer.
 
+Return JSON:
 {
   "questions": [
     {
       "id": "q1",
-      "topic": "Normalization",
+      "topic": "Chapter/Section Name",
       "difficulty": "medium",
-      "questionText": "...",
+      "questionText": "Natural academic question?",
       "options": [
-        { "id": "opt_1", "text": "..." },
-        { "id": "opt_2", "text": "..." },
-        { "id": "opt_3", "text": "..." },
-        { "id": "opt_4", "text": "..." }
+        { "id": "opt_1", "text": "Answer A" },
+        { "id": "opt_2", "text": "Answer B" },
+        { "id": "opt_3", "text": "Answer C" },
+        { "id": "opt_4", "text": "Answer D" }
       ],
-      "correctOptionId": "opt_1",
-      "explanation": "...",
+      "correctOptionId": "opt_2",
+      "explanation": "Explanation citing the text.",
       "sourceCitation": {
-        "documentTitle": "${req.document.title}",
-        "pageNumber": 1,
-        "sectionTitle": "Section Title",
-        "excerpt": "..."
+        "documentTitle": "Document Title",
+        "pageNumber": 3,
+        "sectionTitle": "Section Name",
+        "excerpt": "Verbatim quote from text."
       }
     }
   ]
-}
-`;
+}`;
 
     const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
-    const parsed = JSON.parse(responseText);
-
-    if (parsed && Array.isArray(parsed.questions)) {
-      return parsed.questions;
-    }
+    const parsed = JSON.parse(result.response.text());
+    if (parsed && Array.isArray(parsed.questions)) return parsed.questions;
     throw new Error('Malformed JSON output from Gemini');
   }
 
@@ -156,52 +192,40 @@ GENERATION INSTRUCTIONS:
     const genAI = this.getGenAI();
     if (genAI) {
       try {
-        const modelNames = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3.6-flash', 'gemini-pro'];
+        const modelNames = [
+          'gemini-3.6-flash',
+          'gemini-3.5-flash',
+          'gemini-3.7-flash',
+          'gemini-flash-latest',
+        ];
         for (const modelName of modelNames) {
           try {
             const model = genAI.getGenerativeModel({
               model: modelName,
-              generationConfig: {
-                responseMimeType: 'application/json',
-                temperature: 0.3,
-              },
+              generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
             });
-
-            const prompt = `
-Regenerate a single source-grounded multiple-choice question from the course material below on QuizSom.
-
-Document Title: ${document.title}
-Context:
-${document.rawText.slice(0, 12000)}
-
-Original Question: ${currentQuestion.questionText}
-Topic: ${currentQuestion.topic}
-Teacher Instruction: ${customInstruction || 'Generate a fresh, clear, source-grounded question on this topic.'}
-
-Return JSON with 1 question matching the schema:
+            const cleaned = cleanPdfText(document.rawText);
+            const prompt = `Regenerate one multiple-choice question from this course material.
+Document: ${document.title}
+Text:
+${cleaned.slice(0, 15000)}
+Original topic: ${currentQuestion.topic}
+Instruction: ${customInstruction || 'Create a fresh question on this topic from the text.'}
+Return JSON:
 {
   "question": {
     "topic": "${currentQuestion.topic}",
     "difficulty": "${currentQuestion.difficulty}",
     "questionText": "...",
     "options": [
-      { "id": "opt_1", "text": "..." },
-      { "id": "opt_2", "text": "..." },
-      { "id": "opt_3", "text": "..." },
-      { "id": "opt_4", "text": "..." }
+      { "id": "opt_1", "text": "..." }, { "id": "opt_2", "text": "..." },
+      { "id": "opt_3", "text": "..." }, { "id": "opt_4", "text": "..." }
     ],
     "correctOptionId": "opt_1",
     "explanation": "...",
-    "sourceCitation": {
-      "documentTitle": "${document.title}",
-      "pageNumber": 1,
-      "sectionTitle": "Section Title",
-      "excerpt": "..."
-    }
+    "sourceCitation": { "documentTitle": "${document.title}", "pageNumber": 1, "sectionTitle": "...", "excerpt": "..." }
   }
-}
-`;
-
+}`;
             const result = await model.generateContent(prompt);
             const parsed = JSON.parse(result.response.text());
             if (parsed?.question) {
@@ -211,239 +235,517 @@ Return JSON with 1 question matching the schema:
                 options: parsed.question.options,
                 correctOptionId: parsed.question.correctOptionId,
                 explanation: parsed.question.explanation,
-                sourceCitation: {
-                  ...currentQuestion.sourceCitation,
-                  ...parsed.question.sourceCitation,
-                },
+                sourceCitation: { ...currentQuestion.sourceCitation, ...parsed.question.sourceCitation },
                 isValidated: true,
                 isCustomEdited: true,
               };
             }
-          } catch (modelErr) {
-            console.warn(`Single question regeneration with ${modelName} failed:`, modelErr);
+          } catch (modelErr: any) {
+            if (modelErr?.message?.includes('API_KEY_INVALID')) break;
           }
         }
-      } catch (err) {
-        console.warn('Single question live regeneration failed, applying RAG alternative:', err);
-      }
+      } catch (err) { /* fallthrough */ }
     }
 
-    return {
-      ...currentQuestion,
-      questionText: `[Revised] ${currentQuestion.questionText.replace(/Which|What|Under what/i, 'Identify which')}`,
-      isValidated: true,
-      isCustomEdited: true,
-    };
+    // Fallback regeneration using enhanced local extractor
+    const fallbackQuestions = this.generateLocalRAGQuestions({
+      document,
+      courseId: currentQuestion.courseId,
+      assessmentTitle: 'Regeneration',
+      totalQuestions: 5,
+      difficulty: currentQuestion.difficulty,
+    });
+
+    const matching = fallbackQuestions.find((q) => q.topic === currentQuestion.topic) || fallbackQuestions[0];
+    if (matching) {
+      return {
+        ...currentQuestion,
+        questionText: matching.questionText,
+        options: matching.options,
+        correctOptionId: matching.correctOptionId,
+        explanation: matching.explanation,
+        sourceCitation: matching.sourceCitation,
+        isValidated: true,
+        isCustomEdited: true,
+      };
+    }
+
+    return currentQuestion;
   }
 
-  // Quality Control Pipeline
   validateAndFormatQuestions(rawItems: GeneratedQuestionItem[], courseId: string): Question[] {
     const questions: Question[] = [];
     const seenTexts = new Set<string>();
 
     rawItems.forEach((item, idx) => {
-      // Duplicate detection
-      const normalizedText = item.questionText.toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (seenTexts.has(normalizedText)) {
-        return;
-      }
+      const normalizedText = (item.questionText || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (!normalizedText || seenTexts.has(normalizedText)) return;
       seenTexts.add(normalizedText);
 
-      // Verify options & correct ID
       let options = item.options || [];
       if (options.length < 4) {
-        options = [
-          { id: 'opt_1', text: 'First proposition' },
-          { id: 'opt_2', text: 'Second proposition' },
-          { id: 'opt_3', text: 'Third proposition' },
-          { id: 'opt_4', text: 'Fourth proposition' },
-        ];
+        options = [{ id: 'opt_1', text: 'Option A' }, { id: 'opt_2', text: 'Option B' },
+                   { id: 'opt_3', text: 'Option C' }, { id: 'opt_4', text: 'Option D' }];
       }
-
       let correctOptionId = item.correctOptionId;
-      if (!options.some((o) => o.id === correctOptionId)) {
-        correctOptionId = options[0].id;
-      }
+      if (!options.some((o) => o.id === correctOptionId)) correctOptionId = options[0].id;
 
       questions.push({
         id: `q_gen_${Date.now()}_${idx + 1}`,
         courseId,
-        topic: item.topic || 'Core Material',
+        topic: item.topic || 'General Concepts',
         difficulty: (['easy', 'medium', 'hard'].includes(item.difficulty) ? item.difficulty : 'medium') as QuestionDifficulty,
         questionText: item.questionText,
         options,
         correctOptionId,
-        explanation: item.explanation || 'Verified with source course material.',
+        explanation: item.explanation || 'Verified from course material.',
         sourceCitation: {
-          documentTitle: item.sourceCitation?.documentTitle || 'Uploaded Course Syllabus',
+          documentTitle: item.sourceCitation?.documentTitle || 'Course Material',
           pageNumber: item.sourceCitation?.pageNumber || 1,
-          sectionTitle: item.sourceCitation?.sectionTitle || 'Course Core Concepts',
-          excerpt: item.sourceCitation?.excerpt || 'Source-grounded excerpt from course notes.',
+          sectionTitle: item.sourceCitation?.sectionTitle || 'Core Concepts',
+          excerpt: item.sourceCitation?.excerpt || '',
+        },
+        isValidated: true,
+        createdAt: new Date().toISOString(),
+      });
+    });
+    return questions;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // ADVANCED LOCAL RAG QUESTION ENGINE
+  // Multi-pattern NLP concept extractor with Anaphora Resolution & Semantic Distractors
+  // ═══════════════════════════════════════════════════════════════════════════════
+  private generateLocalRAGQuestions(req: GenerateQuizRequest): Question[] {
+    const docs = req.documents && req.documents.length > 0
+      ? req.documents
+      : req.document ? [req.document] : [];
+
+    if (docs.length === 0) return [];
+
+    const totalToGenerate = Math.min(30, Math.max(1, req.totalQuestions));
+
+    // ── STEP 1: Extract concepts with Anaphora Resolution ──
+    const concepts: ExtractedConcept[] = [];
+
+    docs.forEach((doc) => {
+      const cleaned = cleanPdfText(doc.rawText);
+      const sections = this.splitIntoSections(cleaned, doc.pageCount);
+
+      sections.forEach((section) => {
+        const extracted = this.extractConceptsFromSection(section.text, section.title, section.pageNumber, doc.title);
+        concepts.push(...extracted);
+      });
+    });
+
+    // Clean and normalize all subjects
+    concepts.forEach((c) => {
+      // Strip leading prepositions, articles, pronouns
+      c.subject = c.subject.replace(/^(?:In|For|On|At|With|From|By|As|The|An?|This|That|These|Those|Its?|Here|There)\s+/i, '');
+      // Strip trailing punctuation & conjunctions
+      c.subject = c.subject.replace(/[\s:,;\-–—]+$/, '').trim();
+      c.subject = c.subject.replace(/\s+(?:is|are|was|were|has|have|can|will|may|the|a|an)$/i, '').trim();
+      // Capitalize first letter
+      if (c.subject.length > 0) {
+        c.subject = c.subject.charAt(0).toUpperCase() + c.subject.slice(1);
+      }
+      // Penalize header-like predicates
+      if (c.predicate === c.predicate.toUpperCase() && /^[A-Z]{4,}/.test(c.predicate)) {
+        c.quality = Math.max(0, c.quality - 60);
+      }
+    });
+
+    // Filter usable high-quality concepts
+    const usable = concepts
+      .filter((c) => {
+        const subLow = c.subject.toLowerCase().trim();
+        if (subLow.length < 4) return false;
+        if (SKIP_SUBJECTS.has(subLow)) return false;
+        if (/^\d/.test(subLow)) return false;
+        if (c.quality < 20) return false;
+        const wordCount = c.subject.split(/\s+/).length;
+        if (wordCount > 5) return false; // Concise subjects only
+        // Reject institutional/structural headers
+        if (/^(department|course|section|page|module|unit|chapter|slide|semester|university|college|faculty|professor|school|author|http|www)\b/i.test(c.subject)) return false;
+        // Reject ALL CAPS subjects
+        if (c.subject === c.subject.toUpperCase() && c.subject.length > 5 && !/\d/.test(c.subject)) return false;
+        // Reject header predicates
+        if (c.predicate.startsWith('SECTION') || c.predicate.startsWith('DEPARTMENT') || c.predicate.startsWith('COURSE')) return false;
+        return true;
+      })
+      .sort((a, b) => b.quality - a.quality);
+
+    if (usable.length === 0) {
+      console.warn('[QuizSom] No usable concepts extracted.');
+      return [];
+    }
+
+    console.log(`[QuizSom] Extracted ${usable.length} high-grade concepts across ${docs.length} document(s). Generating ${totalToGenerate} questions.`);
+
+    // ── STEP 2: Balanced distribution across sections ──
+    const sectionMap = new Map<string, ExtractedConcept[]>();
+    usable.forEach((c) => {
+      const key = c.sectionTitle;
+      if (!sectionMap.has(key)) sectionMap.set(key, []);
+      sectionMap.get(key)!.push(c);
+    });
+
+    const sectionKeys = Array.from(sectionMap.keys());
+    const balanced: ExtractedConcept[] = [];
+    let sectionIdx = 0;
+    const sectionCursors = new Map<string, number>();
+    sectionKeys.forEach((k) => sectionCursors.set(k, 0));
+
+    for (let i = 0; i < totalToGenerate; i++) {
+      const key = sectionKeys[sectionIdx % sectionKeys.length];
+      const pool = sectionMap.get(key)!;
+      const cursor = sectionCursors.get(key)! % pool.length;
+      balanced.push(pool[cursor]);
+      sectionCursors.set(key, cursor + 1);
+      sectionIdx++;
+    }
+
+    // ── STEP 3: Build diverse questions with semantic distractors ──
+    const generated: Question[] = [];
+    const usedQuestionTexts = new Set<string>();
+
+    balanced.forEach((concept, i) => {
+      const difficultyLevel: QuestionDifficulty =
+        req.difficulty === 'mixed'
+          ? (['easy', 'medium', 'hard'] as QuestionDifficulty[])[i % 3]
+          : req.difficulty;
+
+      const { questionText, correctAnswer, distractors } =
+        this.buildQuestion(concept, usable, i, difficultyLevel);
+
+      const qNorm = questionText.toLowerCase().replace(/[^a-z0-9]/g, '');
+      if (usedQuestionTexts.has(qNorm)) return;
+      usedQuestionTexts.add(qNorm);
+
+      // Rotate correct answer position across options 1..4
+      const correctPos = i % 4;
+      const allAnswers = [...distractors.slice(0, 3)];
+      while (allAnswers.length < 3) allAnswers.push('This principle is not specified in the primary course curriculum');
+      allAnswers.splice(correctPos, 0, correctAnswer);
+
+      const options = allAnswers.map((text, pos) => ({
+        id: `opt_${pos + 1}`,
+        text: text.length > 130 ? text.slice(0, 127) + '...' : text,
+      }));
+
+      generated.push({
+        id: `q_local_${Date.now()}_${i + 1}`,
+        courseId: req.courseId,
+        topic: concept.sectionTitle,
+        difficulty: difficultyLevel,
+        questionText,
+        options,
+        correctOptionId: `opt_${correctPos + 1}`,
+        explanation: `From "${concept.docTitle}" (Page ${concept.pageNumber}, ${concept.sectionTitle}): "${concept.fullSentence}"`,
+        sourceCitation: {
+          documentTitle: concept.docTitle,
+          pageNumber: concept.pageNumber,
+          sectionTitle: concept.sectionTitle,
+          excerpt: concept.fullSentence,
         },
         isValidated: true,
         createdAt: new Date().toISOString(),
       });
     });
 
-    return questions;
+    return generated;
   }
 
-  // Embedded RAG Question Generator
-  private generateGroundedRAGQuestions(req: GenerateQuizRequest): Question[] {
-    const chunks = req.document.chunks && req.document.chunks.length > 0
-      ? req.document.chunks
-      : [{
-          id: 'c1',
-          documentId: req.document.id,
-          chunkIndex: 0,
-          pageNumber: 1,
-          sectionTitle: 'Module Material',
-          content: req.document.rawText,
-          tokenEstimate: 500,
-        }];
+  // ── Section Splitter ──
+  private splitIntoSections(text: string, totalPages: number): { title: string; text: string; pageNumber: number }[] {
+    const sections: { title: string; text: string; pageNumber: number }[] = [];
+    const lines = text.split('\n');
+    let currentTitle = 'Core Concepts & Fundamentals';
+    let currentText = '';
+    let sectionStartLine = 0;
 
-    const totalToGenerate = Math.min(25, Math.max(1, req.totalQuestions));
-    const generated: Question[] = [];
+    lines.forEach((line, lineIdx) => {
+      const trimmed = line.trim();
 
-    const questionTemplates = [
-      {
-        topic: '1NF & 2NF',
-        diff: 'easy' as QuestionDifficulty,
-        q: 'Which normal form mandates that all attribute values must be atomic and eliminates multi-valued attributes?',
-        opts: ['First Normal Form (1NF)', 'Second Normal Form (2NF)', 'Third Normal Form (3NF)', 'BCNF'],
-        correct: 0,
-        exp: '1NF requires all attribute domains to contain only atomic (indivisible) values, eliminating composite or multi-valued fields.',
-        page: 3,
-        sec: 'Section 3: Normal Forms',
-        excerpt: 'A relation schema R is in 1NF if and only if the domains of all attributes are atomic.',
-      },
-      {
-        topic: 'Functional Dependencies',
-        diff: 'medium' as QuestionDifficulty,
-        q: 'Which axiom from Armstrong’s set allows deducing that if α → β and β → γ, then α → γ?',
-        opts: ['Reflexivity Axiom', 'Transitivity Axiom', 'Augmentation Axiom', 'Decomposition Rule'],
-        correct: 1,
-        exp: 'The Transitivity Axiom states that functional dependencies are transitive across attribute subsets.',
-        page: 2,
-        sec: 'Section 2: Armstrong Axioms',
-        excerpt: '3. Transitivity: If alpha -> beta and beta -> gamma, then alpha -> gamma.',
-      },
-      {
-        topic: '3NF & BCNF',
-        diff: 'hard' as QuestionDifficulty,
-        q: 'Why can a relation schema in 3NF sometimes fail to be in Boyce-Codd Normal Form (BCNF)?',
-        opts: [
-          'Because 3NF permits α → β when β is a prime attribute even if α is not a superkey',
-          'Because 3NF disallows candidate keys with more than two attributes',
-          'Because BCNF does not require lossless-join decomposition',
-          'Because 3NF schemas cannot be decomposed into smaller tables',
-        ],
-        correct: 0,
-        exp: '3NF includes a relaxation rule allowing non-superkey determinants α provided the determined attribute β is prime.',
-        page: 4,
-        sec: 'Section 4: 3NF & BCNF',
-        excerpt: '3NF condition allows alpha is a superkey OR beta is a prime attribute.',
-      },
-      {
-        topic: 'Relational Model',
-        diff: 'easy' as QuestionDifficulty,
-        q: 'What constraint requires that no primary key attribute value in a relational base table may be NULL?',
-        opts: ['Referential Integrity', 'Entity Integrity', 'Domain Constraint', 'Key Closure Integrity'],
-        correct: 1,
-        exp: 'Entity Integrity stipulates that primary key attributes must never be NULL to ensure tuple identifiability.',
-        page: 1,
-        sec: 'Section 1: Integrity Constraints',
-        excerpt: 'Entity Integrity requires that no primary key attribute may accept a NULL value.',
-      },
-      {
-        topic: 'Lossless Decomposition',
-        diff: 'medium' as QuestionDifficulty,
-        q: 'For a decomposition of relation R into (R1, R2) to be lossless, what must the intersection (R1 ∩ R2) satisfy?',
-        opts: [
-          'It must be an empty attribute set',
-          'It must functionally determine at least one of the component relations (R1 or R2)',
-          'It must contain all prime attributes of R',
-          'It must match the primary key of R exactly',
-        ],
-        correct: 1,
-        exp: 'A decomposition is lossless if and only if the common attribute set forms a superkey for at least one decomposed sub-relation.',
-        page: 4,
-        sec: 'Section 4: Decomposition Criteria',
-        excerpt: 'A decomposition is Lossless if and only if (R1 intersect R2) -> R1 OR (R1 intersect R2) -> R2.',
-      },
-      {
-        topic: '1NF & 2NF',
-        diff: 'medium' as QuestionDifficulty,
-        q: 'What specific kind of dependency is completely eliminated when moving from 1NF to 2NF?',
-        opts: ['Transitive dependencies', 'Partial dependencies', 'Multi-valued dependencies', 'Trivial reflexivity'],
-        correct: 1,
-        exp: 'Second Normal Form (2NF) enforces that every non-prime attribute is fully functionally dependent on every candidate key.',
-        page: 3,
-        sec: 'Section 3: Second Normal Form',
-        excerpt: '2NF strictly eliminates partial dependencies where non-prime attributes depend on a proper subset of candidate keys.',
-      },
-      {
-        topic: 'Functional Dependencies',
-        diff: 'hard' as QuestionDifficulty,
-        q: 'If attribute set α functionally determines βγ (α → βγ), which derived rule guarantees α → β and α → γ independently?',
-        opts: ['Union Rule', 'Decomposition (Projectivity) Rule', 'Pseudo-transitivity Rule', 'Augmentation Rule'],
-        correct: 1,
-        exp: 'The Decomposition Rule allows breaking a multi-attribute right-hand side into separate functional dependencies.',
-        page: 2,
-        sec: 'Section 2: Derived Rules',
-        excerpt: 'Decomposition: If alpha -> beta gamma, then alpha -> beta and alpha -> gamma.',
-      },
-      {
-        topic: 'Relational Model',
-        diff: 'easy' as QuestionDifficulty,
-        q: 'What is the theoretical definition of a Candidate Key in relational databases?',
-        opts: [
-          'Any superkey containing only integer types',
-          'A minimal superkey where no proper subset is itself a superkey',
-          'A foreign key referencing the primary key of the same relation',
-          'An indexed column designated by the database engine',
-        ],
-        correct: 1,
-        exp: 'A candidate key is a minimal superkey; removing any attribute destroys its uniqueness property.',
-        page: 1,
-        sec: 'Section 1: Key Constraints',
-        excerpt: 'Candidate Key: A minimal superkey; a superkey K such that no proper subset of K is also a superkey.',
-      },
-    ];
+      const isHeading =
+        (trimmed.length > 4 && trimmed.length < 75 &&
+         (trimmed === trimmed.toUpperCase() && /[A-Z]{3,}/.test(trimmed)) ||
+         /^(?:SECTION|CHAPTER|MODULE|UNIT|TOPIC|PART)\s*[\d.:]/i.test(trimmed) ||
+         /^\d+\.\d*\s+[A-Z][A-Za-z\s&,\-]{4,60}$/.test(trimmed));
 
-    for (let i = 0; i < totalToGenerate; i++) {
-      const template = questionTemplates[i % questionTemplates.length];
-      const chunk = chunks[i % chunks.length];
-      const pageNum = chunk ? chunk.pageNumber : template.page;
+      if (isHeading && currentText.trim().length > 60) {
+        const estPage = Math.min(totalPages, Math.max(1,
+          Math.floor(sectionStartLine / Math.max(1, Math.ceil(lines.length / totalPages))) + 1));
+        sections.push({ title: currentTitle, text: currentText.trim(), pageNumber: estPage });
+        currentTitle = trimmed.replace(/^[\d.\s:–\-]+/, '').trim();
+        if (currentTitle.length < 3) currentTitle = trimmed;
+        currentText = '';
+        sectionStartLine = lineIdx;
+      } else {
+        currentText += line + '\n';
+      }
+    });
 
-      const options = template.opts.map((text, optIdx) => ({
-        id: `opt_${optIdx + 1}`,
-        text,
-      }));
-
-      generated.push({
-        id: `q_gen_${Date.now()}_${i + 1}`,
-        courseId: req.courseId,
-        topic: template.topic,
-        difficulty: req.difficulty === 'mixed' ? template.diff : req.difficulty,
-        questionText: i >= questionTemplates.length 
-          ? `[Advanced Analysis Q${i + 1}] ${template.q}` 
-          : template.q,
-        options,
-        correctOptionId: options[template.correct].id,
-        explanation: template.exp,
-        sourceCitation: {
-          documentTitle: req.document.title,
-          pageNumber: Math.min(req.document.pageCount, pageNum),
-          sectionTitle: chunk.sectionTitle || template.sec,
-          excerpt: template.excerpt,
-        },
-        isValidated: true,
-        createdAt: new Date().toISOString(),
-      });
+    if (currentText.trim().length > 30) {
+      const estPage = Math.min(totalPages, Math.max(1,
+        Math.floor(sectionStartLine / Math.max(1, Math.ceil(lines.length / totalPages))) + 1));
+      sections.push({ title: currentTitle, text: currentText.trim(), pageNumber: estPage });
     }
 
-    return generated;
+    if (sections.length <= 1 && text.length > 200) {
+      const paragraphs = text.split(/\n\s*\n/).filter((p) => p.trim().length > 40);
+      const chunkSize = Math.max(1, Math.ceil(paragraphs.length / Math.min(6, Math.max(2, Math.ceil(totalPages / 3)))));
+
+      for (let i = 0; i < paragraphs.length; i += chunkSize) {
+        const chunk = paragraphs.slice(i, i + chunkSize).join('\n\n');
+        const firstLine = chunk.split('\n')[0].replace(/^[\d.#*_\-\s]+/, '').trim();
+        const title = (firstLine.length > 5 && firstLine.length < 65) ? firstLine : `Module Part ${Math.floor(i / chunkSize) + 1}`;
+        const estPage = Math.min(totalPages, Math.floor(i / Math.max(1, Math.ceil(paragraphs.length / totalPages))) + 1);
+        sections.push({ title, text: chunk, pageNumber: estPage });
+      }
+    }
+
+    return sections.length > 0 ? sections : [{ title: 'Course Material', text, pageNumber: 1 }];
+  }
+
+  // ── Multi-Pattern Concept Extractor with Anaphora Resolution ──
+  private extractConceptsFromSection(
+    text: string,
+    sectionTitle: string,
+    pageNumber: number,
+    docTitle: string
+  ): ExtractedConcept[] {
+    const results: ExtractedConcept[] = [];
+    const sentences = text
+      .replace(/\n/g, ' ')
+      .replace(/\s+/g, ' ')
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => {
+        if (s.length < 30 || s.length > 280) return false;
+        if (/^(created by|from\s*:|by\s*[–-]|www\.|http|prof\b|dr\b|page\b|slide\b)/i.test(s)) return false;
+        if (/^\d{1,2}\/\d{1,2}\/\d{2,4}/.test(s)) return false;
+        if (!/^[A-Za-z]/.test(s)) return false;
+        const wc = s.split(/\s+/).filter((w) => w.length > 1).length;
+        return wc >= 6;
+      });
+
+    let activeSubject = sectionTitle.replace(/^[\d.\s:–\-]+/, '').trim();
+
+    sentences.forEach((sent) => {
+      // Check for Anaphora (sentences starting with "It provides", "It is", "This is")
+      const isPronounStart = /^(?:It|This|These|They)\s+(?:is|are|provides?|enables?|ensures?|allows?|requires?|consists?|means?)/i.test(sent);
+
+      // Pattern 1: DEFINITION — "X is/are/refers to Y"
+      const defMatch = sent.match(
+        /^(.{4,50}?)\s+(?:is|are|refers?\s+to|is\s+defined\s+as|is\s+known\s+as|means?|consists?\s+of|represents?)\s+(.{15,}?)\.?$/i
+      );
+      if (defMatch) {
+        let subj = defMatch[1].trim().replace(/^[^A-Za-z]+/, '');
+        const pred = defMatch[2].trim().replace(/\.+$/, '');
+
+        // If subject is a pronoun, resolve to active subject
+        if (isPronounStart && activeSubject) {
+          subj = activeSubject;
+        } else if (subj.length >= 4) {
+          activeSubject = subj;
+        }
+
+        if (subj.length >= 4 && pred.length >= 15) {
+          results.push({
+            type: 'DEFINITION', subject: subj,
+            predicate: pred.charAt(0).toUpperCase() + pred.slice(1),
+            fullSentence: sent, docTitle, pageNumber, sectionTitle,
+            quality: 90 + Math.min(10, subj.length),
+          });
+          return;
+        }
+      }
+
+      // Pattern 2: PROPERTY — "X provides/enables/ensures/requires/allows Y"
+      const propMatch = sent.match(
+        /^(.{4,50}?)\s+(?:provides?|enables?|ensures?|requires?|allows?|supports?|includes?|uses?|implements?|maintains?|creates?|prevents?|eliminates?)\s+(.{12,}?)\.?$/i
+      );
+      if (propMatch) {
+        let subj = propMatch[1].trim().replace(/^[^A-Za-z]+/, '');
+        const pred = propMatch[2].trim().replace(/\.+$/, '');
+
+        if (isPronounStart && activeSubject) {
+          subj = activeSubject;
+        } else if (subj.length >= 4) {
+          activeSubject = subj;
+        }
+
+        if (subj.length >= 4 && pred.length >= 12) {
+          results.push({
+            type: 'PROPERTY', subject: subj,
+            predicate: pred.charAt(0).toUpperCase() + pred.slice(1),
+            fullSentence: sent, docTitle, pageNumber, sectionTitle,
+            quality: 80 + Math.min(10, subj.length),
+          });
+          return;
+        }
+      }
+
+      // Pattern 3: LIST / FEATURE ITEM — "Concept: Description" or "Feature - Description"
+      const listMatch = sent.match(/^([A-Z][a-zA-Z\s]{3,35})\s*[:\-–—]\s*(.{15,})$/);
+      if (listMatch) {
+        const subj = listMatch[1].trim();
+        const pred = listMatch[2].trim().replace(/\.+$/, '');
+        if (subj.length >= 4 && pred.length >= 15) {
+          activeSubject = subj;
+          results.push({
+            type: 'FEATURE', subject: subj,
+            predicate: pred.charAt(0).toUpperCase() + pred.slice(1),
+            fullSentence: sent, docTitle, pageNumber, sectionTitle,
+            quality: 85,
+          });
+          return;
+        }
+      }
+
+      // Pattern 4: COMPARISON — sentences with "unlike/whereas/compared to/differs from/in contrast"
+      if (/\b(unlike|whereas|compared\s+to|differs?\s+from|in\s+contrast|on\s+the\s+other\s+hand|rather\s+than)\b/i.test(sent)) {
+        const capitalMatch = sent.match(/\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})\b/);
+        const subj = capitalMatch ? capitalMatch[1] : activeSubject || 'This concept';
+        results.push({
+          type: 'COMPARISON', subject: subj,
+          predicate: sent.replace(/\.+$/, ''),
+          fullSentence: sent, docTitle, pageNumber, sectionTitle,
+          quality: 85,
+        });
+        return;
+      }
+
+      // Pattern 5: PROCESS — sentences with step/phase/stage/procedure/first/then/finally
+      if (/\b(step|phase|stage|procedure|first|then|finally|next|begins?\s+with|followed\s+by|process\s+of)\b/i.test(sent)) {
+        const capitalMatch = sent.match(/\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,2})\b/);
+        const subj = capitalMatch ? capitalMatch[1] : activeSubject || 'This process';
+        results.push({
+          type: 'PROCESS', subject: subj,
+          predicate: sent.replace(/\.+$/, ''),
+          fullSentence: sent, docTitle, pageNumber, sectionTitle,
+          quality: 75,
+        });
+        return;
+      }
+
+      // Pattern 6: GENERAL FACT with capitalized concept
+      const capitalMatch = sent.match(/\b([A-Z][a-zA-Z]+(?:\s+[A-Z][a-zA-Z]+){0,3})\b/);
+      if (capitalMatch && capitalMatch[1].length >= 4 && sent.length > 45) {
+        results.push({
+          type: 'FACT', subject: capitalMatch[1],
+          predicate: sent.replace(/\.+$/, ''),
+          fullSentence: sent, docTitle, pageNumber, sectionTitle,
+          quality: 55 + Math.min(15, capitalMatch[1].length),
+        });
+      }
+    });
+
+    return results;
+  }
+
+  // ── Question Builder — picks question type based on concept type ──
+  private buildQuestion(
+    concept: ExtractedConcept,
+    allConcepts: ExtractedConcept[],
+    index: number,
+    difficulty: QuestionDifficulty
+  ): { questionText: string; correctAnswer: string; distractors: string[] } {
+
+    const subjectDisplay = concept.subject.length > 50
+      ? concept.subject.slice(0, 47) + '...'
+      : concept.subject;
+
+    let questionText = '';
+    const correctAnswer = concept.predicate;
+
+    switch (concept.type) {
+      case 'DEFINITION': {
+        const templates = [
+          `What is ${subjectDisplay}?`,
+          `How is ${subjectDisplay} defined in the course material?`,
+          `Which of the following best defines the concept of ${subjectDisplay}?`,
+        ];
+        questionText = templates[index % templates.length];
+        break;
+      }
+      case 'PROPERTY': {
+        const templates = [
+          `What does ${subjectDisplay} provide or enable?`,
+          `Which capability or property is associated with ${subjectDisplay}?`,
+          `What is a key functional requirement of ${subjectDisplay}?`,
+        ];
+        questionText = templates[index % templates.length];
+        break;
+      }
+      case 'FEATURE': {
+        const templates = [
+          `According to the curriculum, what does ${subjectDisplay} represent?`,
+          `Which description accurately corresponds to ${subjectDisplay}?`,
+        ];
+        questionText = templates[index % templates.length];
+        break;
+      }
+      case 'COMPARISON': {
+        questionText = `Which of the following correctly describes a distinction involving ${subjectDisplay}?`;
+        break;
+      }
+      case 'PROCESS': {
+        const templates = [
+          `Which statement correctly describes the operation involving ${subjectDisplay}?`,
+          `What execution flow or procedure is associated with ${subjectDisplay}?`,
+        ];
+        questionText = templates[index % templates.length];
+        break;
+      }
+      case 'FACT':
+      default: {
+        const templates = [
+          `According to the course material on "${concept.sectionTitle}", which statement about ${subjectDisplay} is correct?`,
+          `Which of the following is true regarding ${subjectDisplay}?`,
+          `What does the curriculum state regarding ${subjectDisplay}?`,
+        ];
+        questionText = templates[index % templates.length];
+        break;
+      }
+    }
+
+    // Build smart semantic distractors:
+    // 1. Same concept type + same section
+    // 2. Same concept type + other sections
+    // 3. Any concept from other sections
+    const sameTypeAndSection = allConcepts.filter(
+      (c) => c.type === concept.type && c.sectionTitle === concept.sectionTitle && c.subject !== concept.subject && c.predicate !== concept.predicate
+    );
+    const sameTypeOtherSection = allConcepts.filter(
+      (c) => c.type === concept.type && c.subject !== concept.subject && c.predicate !== concept.predicate
+    );
+    const fallbackConcepts = allConcepts.filter(
+      (c) => c.subject !== concept.subject && c.predicate !== concept.predicate
+    );
+
+    const distractorPool = sameTypeAndSection.length >= 3
+      ? sameTypeAndSection
+      : sameTypeOtherSection.length >= 3
+      ? sameTypeOtherSection
+      : fallbackConcepts;
+
+    const distractors: string[] = [];
+    const step = Math.max(1, Math.floor(distractorPool.length / 4));
+
+    for (let d = 0; d < 3; d++) {
+      const idx = (index + (d + 1) * step) % Math.max(1, distractorPool.length);
+      const candidate = distractorPool[idx];
+      if (candidate) {
+        const distText = candidate.predicate;
+        if (distText !== correctAnswer && !distractors.includes(distText)) {
+          distractors.push(distText);
+        }
+      }
+    }
+
+    return { questionText, correctAnswer, distractors };
   }
 }
 

@@ -36,3 +36,4 @@ yarn-error.log*
 
 # Local databases & temp data
 .data/
+*.tsbuildinfo

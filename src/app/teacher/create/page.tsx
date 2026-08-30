@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -22,6 +22,14 @@ import {
   Sliders,
   Check,
   Zap,
+  Folder,
+  FolderPlus,
+  FolderCheck,
+  Files,
+  CheckSquare,
+  Square,
+  X,
+  Plus,
 } from 'lucide-react';
 import { Question, DocumentMaterial } from '@/lib/db/types';
 
@@ -29,34 +37,39 @@ export default function CreateAssessmentWizard() {
   const router = useRouter();
   const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
 
-  // Step 1 State: Material
+  // Step 1 State: Multi-Document & Folder Selection
   const [materials, setMaterials] = useState<DocumentMaterial[]>([]);
-  const [selectedDocId, setSelectedDocId] = useState<string>('doc_dbms_mod2');
-  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatusText, setUploadStatusText] = useState('');
+  const [activeFolderTab, setActiveFolderTab] = useState<'all' | 'dbms' | 'syllabus' | 'custom'>('all');
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const folderInputRef = useRef<HTMLInputElement>(null);
 
   // Step 2 State: Configuration
-  const [title, setTitle] = useState('DBMS — Internal Assessment 01');
-  const [courseCode, setCourseCode] = useState('CS301');
-  const [courseName, setCourseName] = useState('Database Management Systems');
-  const [moduleName, setModuleName] = useState('Module 2: Relational Model & Normalization');
+  const [title, setTitle] = useState('Course Internal Assessment 01');
+  const [courseCode, setCourseCode] = useState('');
+  const [courseName, setCourseName] = useState('');
+  const [moduleName, setModuleName] = useState('');
   const [totalQuestions, setTotalQuestions] = useState<number>(15);
   const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | 'mixed'>('mixed');
-  const [durationMinutes, setDurationMinutes] = useState<number>(15);
+  const [durationMinutes, setDurationMinutes] = useState<number | string>(15);
   const [negativeMarking, setNegativeMarking] = useState<number>(0.25);
   const [randomizeQuestions, setRandomizeQuestions] = useState(true);
   const [randomizeOptions, setRandomizeOptions] = useState(true);
   const [showLeaderboard, setShowLeaderboard] = useState<'PUBLIC' | 'ANONYMOUS' | 'DISABLED'>('PUBLIC');
   const [requireFullscreen, setRequireFullscreen] = useState(true);
 
-  // Step 3 State: Generation Progress
+  // Step 3 State: Generation Progress & Visualization
   const [generationStage, setGenerationStage] = useState<number>(0);
+  const [generationProgress, setGenerationProgress] = useState<number>(15);
   const [generationStages] = useState([
-    'Reading syllabus document & verifying semantic encoding',
-    'Extracting discrete curriculum chunk hierarchy',
-    'Building localized RAG retrieval context',
-    'Executing source-grounded Gemini Flash generation',
-    'Verifying answer uniqueness, option stability & source citations',
+    'Extracting & cleaning syllabus text across selected document(s)...',
+    'Filtering slide artefacts, headers, and building RAG knowledge graph...',
+    'Analyzing curriculum concept hierarchy & cross-module principles...',
+    'Synthesizing source-grounded questions with balanced chapter distribution...',
+    'Verifying answer uniqueness, option stability & exact page citations...',
   ]);
 
   // Step 4 State: Questions Review & QA
@@ -87,14 +100,64 @@ export default function CreateAssessmentWizard() {
     fetchMaterials();
   }, []);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Multi-Document Toggle
+  const toggleDocSelection = (id: string) => {
+    setSelectedDocIds((prev) => {
+      let updated: string[];
+      if (prev.includes(id)) {
+        updated = prev.filter((dId) => dId !== id);
+      } else {
+        updated = [...prev, id];
+      }
 
+      // Auto-update assessment title based on selected document if user hasn't customized it
+      const selected = materials.filter((m) => updated.includes(m.id));
+      if (selected.length === 1) {
+        setTitle(`${selected[0].title} — Assessment`);
+      } else if (selected.length > 1) {
+        setTitle(`Comprehensive Assessment (${selected.length} Materials)`);
+      }
+
+      return updated;
+    });
+  };
+
+  const handleSelectAll = () => {
+    setSelectedDocIds(materials.map((m) => m.id));
+    if (materials.length > 0) {
+      setTitle(`Comprehensive Assessment (${materials.length} Materials)`);
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedDocIds([]);
+  };
+
+  // Folder batch select
+  const handleSelectFolder = (docIds: string[]) => {
+    const allSelected = docIds.length > 0 && docIds.every((id) => selectedDocIds.includes(id));
+    if (allSelected) {
+      // Deselect folder docs
+      setSelectedDocIds((prev) => prev.filter((id) => !docIds.includes(id)));
+    } else {
+      // Add all folder docs
+      setSelectedDocIds((prev) => Array.from(new Set([...prev, ...docIds])));
+    }
+  };
+
+  // Handle Multi-File or Folder Upload
+  const handleFilesUpload = async (fileList: FileList | null) => {
+    if (!fileList || fileList.length === 0) return;
+
+    const files = Array.from(fileList);
     setIsUploading(true);
+    setUploadStatusText(`Uploading and indexing ${files.length} document(s)...`);
+
     const formData = new FormData();
-    formData.append('file', file);
     formData.append('courseId', 'course_dbms_301');
+    files.forEach((file) => {
+      formData.append('files', file);
+    });
 
     try {
       const res = await fetch('/api/materials/upload', {
@@ -102,34 +165,94 @@ export default function CreateAssessmentWizard() {
         body: formData,
       });
       const data = await res.json();
-      if (data.document) {
-        setMaterials((prev) => [data.document, ...prev]);
-        setSelectedDocId(data.document.id);
-        setTitle(`${data.document.title} — Assessment`);
+
+      const newDocs: DocumentMaterial[] = data.documents || (data.document ? [data.document] : []);
+
+      if (newDocs.length > 0) {
+        setMaterials((prev) => {
+          const existingIds = new Set(prev.map((d) => d.id));
+          const filtered = newDocs.filter((d) => !existingIds.has(d.id));
+          return [...filtered, ...prev];
+        });
+
+        // Auto-select all newly uploaded documents
+        const newIds = newDocs.map((d) => d.id);
+        setSelectedDocIds((prev) => Array.from(new Set([...newIds, ...prev])));
+
+        if (newDocs.length === 1) {
+          setTitle(`${newDocs[0].title} — Assessment`);
+        } else {
+          setTitle(`Comprehensive Multi-Document Assessment (${newDocs.length} Materials)`);
+        }
       }
     } catch (err) {
       console.error('Upload failed:', err);
-      alert('Upload failed. Please try again.');
+      alert('Upload failed. Please check file format and try again.');
     } finally {
       setIsUploading(false);
+      setUploadStatusText('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (folderInputRef.current) folderInputRef.current.value = '';
     }
   };
+
+  // Drag & Drop handlers
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleFilesUpload(e.dataTransfer.files);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const selectedMaterials = materials.filter((m) => selectedDocIds.includes(m.id));
+  const totalSelectedPages = selectedMaterials.reduce((acc, m) => acc + (m.pageCount || 1), 0);
+  const totalSelectedChunks = selectedMaterials.reduce((acc, m) => acc + (m.chunks?.length || 4), 0);
+
+  // Folders groupings
+  const dbmsDocIds = materials.filter((m) => m.id.includes('dbms') || m.title.toLowerCase().includes('dbms') || m.title.toLowerCase().includes('relational')).map((m) => m.id);
+  const syllabusDocIds = materials.filter((m) => m.id.includes('syllabus') || m.title.toLowerCase().includes('syllabus') || m.id.includes('rai')).map((m) => m.id);
+  const customDocIds = materials.filter((m) => !dbmsDocIds.includes(m.id) && !syllabusDocIds.includes(m.id)).map((m) => m.id);
 
   const runGeneration = async () => {
     setStep(3);
     setGenerationStage(0);
+    setGenerationProgress(15);
 
-    const timer1 = setTimeout(() => setGenerationStage(1), 500);
-    const timer2 = setTimeout(() => setGenerationStage(2), 1100);
-    const timer3 = setTimeout(() => setGenerationStage(3), 1800);
+    const startTime = Date.now();
+    const minDuration = 5500; // Minimum 5.5s for authentic multi-document RAG pipeline visualization
+
+    setTimeout(() => {
+      setGenerationStage(1);
+      setGenerationProgress(35);
+    }, 1100);
+
+    setTimeout(() => {
+      setGenerationStage(2);
+      setGenerationProgress(60);
+    }, 2300);
+
+    setTimeout(() => {
+      setGenerationStage(3);
+      setGenerationProgress(80);
+    }, 3600);
+
+    setTimeout(() => {
+      setGenerationStage(4);
+      setGenerationProgress(95);
+    }, 4800);
 
     try {
       const res = await fetch('/api/assessments/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          documentId: selectedDocId,
-          courseId: 'course_dbms_301',
+          documentIds: selectedDocIds,
+          documentId: selectedDocIds[0] || (materials[0]?.id || ''),
+          courseId: materials.find((m) => selectedDocIds.includes(m.id))?.courseId || 'course_default',
           assessmentTitle: title,
           totalQuestions,
           difficulty,
@@ -138,14 +261,20 @@ export default function CreateAssessmentWizard() {
       });
 
       const data = await res.json();
-      setGenerationStage(4);
+      const elapsed = Date.now() - startTime;
+      const remainingWait = Math.max(0, minDuration - elapsed);
 
       setTimeout(() => {
-        if (data.questions && data.questions.length > 0) {
-          setQuestions(data.questions);
-        }
-        setStep(4);
-      }, 500);
+        setGenerationStage(5);
+        setGenerationProgress(100);
+
+        setTimeout(() => {
+          if (data.questions && data.questions.length > 0) {
+            setQuestions(data.questions);
+          }
+          setStep(4);
+        }, 500);
+      }, remainingWait);
     } catch (err) {
       console.error('Generation error:', err);
       setStep(4);
@@ -162,7 +291,7 @@ export default function CreateAssessmentWizard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: regenerateModalQ,
-          documentId: selectedDocId,
+          documentId: selectedDocIds[0] || (materials[0]?.id || ''),
           customInstruction: regeneratePrompt,
         }),
       });
@@ -203,10 +332,10 @@ export default function CreateAssessmentWizard() {
           teacherId: 'user_prof_arvind',
           title,
           moduleName,
-          materialDocumentIds: [selectedDocId],
+          materialDocumentIds: selectedDocIds,
           questions,
           settings: {
-            durationMinutes,
+            durationMinutes: Number(durationMinutes) || 15,
             totalQuestions: questions.length,
             difficultyDistribution: difficulty,
             randomizeQuestions,
@@ -222,13 +351,13 @@ export default function CreateAssessmentWizard() {
       });
 
       const data = await res.json();
-      if (data.assessment && data.room) {
+      if (data.success) {
         setPublishedAssessmentId(data.assessment.id);
         setGeneratedRoomCode(data.room.code);
         setStep(5);
       }
     } catch (err) {
-      console.error('Publishing error:', err);
+      console.error('Publish error:', err);
       alert('Failed to publish assessment.');
     } finally {
       setIsPublishing(false);
@@ -241,28 +370,31 @@ export default function CreateAssessmentWizard() {
     setTimeout(() => setIsCopied(false), 2000);
   };
 
+  const steps = [
+    { num: 1, label: 'Material' },
+    { num: 2, label: 'Configure' },
+    { num: 3, label: 'Generate' },
+    { num: 4, label: 'Review' },
+    { num: 5, label: 'Publish' },
+  ];
+
   return (
-    <div className="max-w-4xl mx-auto pb-16 space-y-8">
-      {/* Stepper Header */}
-      <div className="pb-4 border-b border-slate-200">
+    <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Top Header & Step Progress Bar */}
+      <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="text-xs font-mono uppercase font-bold tracking-wider text-indigo-600">
-              Assessment Generation Kernel
+            <div className="text-xs font-mono font-bold uppercase tracking-wider text-blue-600">
+              ASSESSMENT GENERATION KERNEL
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-0.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Create Internal Assessment
             </h1>
           </div>
 
-          <div className="flex items-center gap-1 sm:gap-2">
-            {[
-              { num: 1, label: 'Material' },
-              { num: 2, label: 'Configure' },
-              { num: 3, label: 'Generate' },
-              { num: 4, label: 'Review' },
-              { num: 5, label: 'Publish' },
-            ].map((s) => (
+          {/* Stepper Tabs */}
+          <div className="flex items-center gap-1.5 p-1 bg-white border border-slate-200 rounded-xl shadow-2xs">
+            {steps.map((s) => (
               <div
                 key={s.num}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-mono font-bold transition-all ${
@@ -281,86 +413,238 @@ export default function CreateAssessmentWizard() {
         </div>
       </div>
 
-      {/* STEP 1: MATERIAL SELECTION */}
+      {/* STEP 1: MULTI-MATERIAL & FOLDER SELECTION */}
       {step === 1 && (
         <div className="space-y-6">
-          <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200 shadow-card space-y-5">
-            <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                01. Upload or Select Course Material
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Upload your syllabus module, lecture notes, or textbook chapter. Gemini will extract facts exclusively from this material.
-              </p>
+          <div className="p-6 sm:p-8 rounded-2xl bg-white border border-slate-200 shadow-card space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                  <span>01. Upload or Select Course Materials & Folders</span>
+                  <span className="text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                    MULTI-SOURCE RAG
+                  </span>
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                  Select single or multiple syllabus modules, notes, textbooks, or entire folders. Gemini Flash will synthesize questions grounded across all selected sources.
+                </p>
+              </div>
+
+              {/* Quick Batch Select Actions */}
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={handleSelectAll}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5"
+                >
+                  <CheckSquare className="w-3.5 h-3.5" />
+                  <span>Select All</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDeselectAll}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1.5"
+                >
+                  <Square className="w-3.5 h-3.5" />
+                  <span>Reset</span>
+                </button>
+              </div>
             </div>
 
-            {/* Drag & Drop Upload Zone */}
-            <label className="border-2 border-dashed border-slate-300 hover:border-indigo-600 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-all bg-slate-50/50 hover:bg-indigo-50/20 group">
-              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 group-hover:text-indigo-600 group-hover:scale-105 transition-all mb-3">
+            {/* Drag & Drop Upload Zone with Multi-File & Folder Buttons */}
+            <div
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+              className="border-2 border-dashed border-slate-300 hover:border-blue-600 rounded-2xl p-6 sm:p-8 flex flex-col items-center justify-center text-center transition-all bg-slate-50/50 hover:bg-blue-50/20 group"
+            >
+              <div className="w-12 h-12 rounded-2xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-600 group-hover:text-blue-600 group-hover:scale-105 transition-all mb-3">
                 <Upload className="w-6 h-6" />
               </div>
               <span className="text-sm font-bold text-slate-900">
-                {isUploading ? 'Extracting & chunking document with RAG...' : 'Drop course material or browse file'}
+                {isUploading ? (uploadStatusText || 'Extracting & chunking documents with RAG...') : 'Drop files / folders here, or use the buttons below'}
               </span>
-              <span className="text-xs text-slate-500 mt-1">
-                Supported formats: PDF, DOCX, TXT (Up to 25MB)
+              <span className="text-xs text-slate-500 mt-1 mb-4">
+                Supported formats: PDF, DOCX, TXT · Multiple files and whole folder structures supported
               </span>
-              <input
-                type="file"
-                accept=".pdf,.docx,.txt"
-                onChange={handleFileUpload}
-                disabled={isUploading}
-                className="hidden"
-              />
-            </label>
 
-            {/* Available Materials Selection */}
-            <div>
-              <div className="text-xs font-bold text-slate-500 uppercase font-mono mb-2.5">
-                Pre-Loaded Course Materials
+              {/* Dual Upload Action Buttons */}
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <label className="btn-primary py-2 px-4 text-xs font-bold shadow-sm cursor-pointer inline-flex items-center gap-2">
+                  <Files className="w-3.5 h-3.5" />
+                  <span>Browse Multiple Files</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".pdf,.docx,.txt"
+                    onChange={(e) => handleFilesUpload(e.target.files)}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                </label>
+
+                <label className="btn-secondary py-2 px-4 text-xs font-bold shadow-sm cursor-pointer inline-flex items-center gap-2">
+                  <FolderPlus className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Upload Entire Folder</span>
+                  <input
+                    ref={folderInputRef}
+                    type="file"
+                    // @ts-ignore
+                    webkitdirectory=""
+                    // @ts-ignore
+                    directory=""
+                    multiple
+                    onChange={(e) => handleFilesUpload(e.target.files)}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                </label>
               </div>
-              <div className="space-y-2.5">
-                {materials.map((doc) => (
+            </div>
+
+            {/* Folder Tabs & Categorized Materials */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-xs font-bold text-slate-500 uppercase font-mono">
+                  Curriculum Folders & Materials
+                </div>
+                <div className="text-xs font-semibold text-slate-600">
+                  <span className="text-blue-600 font-bold">{selectedDocIds.length}</span> of {materials.length} selected
+                </div>
+              </div>
+
+              {/* Folder Quick-Select Cards */}
+              <div className="grid sm:grid-cols-2 gap-3 mb-2">
+                {/* DBMS Modules Folder */}
+                {dbmsDocIds.length > 0 && (
                   <div
-                    key={doc.id}
-                    onClick={() => setSelectedDocId(doc.id)}
-                    className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
-                      selectedDocId === doc.id
-                        ? 'border-indigo-600 bg-indigo-50/40 ring-2 ring-indigo-600/20 shadow-sm'
-                        : 'border-slate-200 bg-white hover:bg-slate-50'
+                    onClick={() => handleSelectFolder(dbmsDocIds)}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                      dbmsDocIds.every((id) => selectedDocIds.includes(id))
+                        ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
+                        : 'border-slate-200 bg-slate-50/80 hover:bg-slate-100'
                     }`}
                   >
-                    <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${selectedDocId === doc.id ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600'}`}>
-                        <FileText className="w-5 h-5" />
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center">
+                        <FolderCheck className="w-4 h-4" />
                       </div>
                       <div>
-                        <div className="text-xs font-bold text-slate-900">{doc.title}</div>
-                        <div className="text-[11px] text-slate-500 font-mono">
-                          {doc.fileName} · {doc.pageCount} Pages · {doc.chunks?.length || 4} Chunks Indexed · Processed ✓
+                        <div className="text-xs font-bold text-slate-900">DBMS Modules Folder</div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          {dbmsDocIds.length} Document(s) inside
                         </div>
                       </div>
                     </div>
-                    {selectedDocId === doc.id && (
-                      <span className="text-xs font-bold text-indigo-700 flex items-center gap-1 font-mono bg-white px-2.5 py-1 rounded-md border border-indigo-200 shadow-sm">
-                        <Check className="w-3.5 h-3.5" /> Selected
-                      </span>
-                    )}
+                    <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                      {dbmsDocIds.every((id) => selectedDocIds.includes(id)) ? 'Folder Selected ✓' : 'Select Folder'}
+                    </span>
                   </div>
-                ))}
+                )}
+
+                {/* Syllabus & Notes Folder */}
+                {syllabusDocIds.length > 0 && (
+                  <div
+                    onClick={() => handleSelectFolder(syllabusDocIds)}
+                    className={`p-3.5 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                      syllabusDocIds.every((id) => selectedDocIds.includes(id))
+                        ? 'border-blue-600 bg-blue-50/50 shadow-2xs'
+                        : 'border-slate-200 bg-slate-50/80 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-800 flex items-center justify-center">
+                        <Folder className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <div className="text-xs font-bold text-slate-900">Syllabus & Curriculum Folder</div>
+                        <div className="text-[10px] text-slate-500 font-mono">
+                          {syllabusDocIds.length} Document(s) inside
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[11px] font-bold font-mono px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700">
+                      {syllabusDocIds.every((id) => selectedDocIds.includes(id)) ? 'Folder Selected ✓' : 'Select Folder'}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Individual Documents Multi-Select List */}
+              <div className="space-y-2.5">
+                {materials.map((doc) => {
+                  const isSelected = selectedDocIds.includes(doc.id);
+                  return (
+                    <div
+                      key={doc.id}
+                      onClick={() => toggleDocSelection(doc.id)}
+                      className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-600/20 shadow-sm'
+                          : 'border-slate-200 bg-white hover:bg-slate-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600'
+                          }`}
+                        >
+                          {isSelected ? <CheckSquare className="w-5 h-5" /> : <FileText className="w-5 h-5" />}
+                        </div>
+                        <div>
+                          <div className="text-xs font-bold text-slate-900">{doc.title}</div>
+                          <div className="text-[11px] text-slate-500 font-mono">
+                            {doc.fileName} · {doc.pageCount} Pages · {doc.chunks?.length || 4} Chunks Indexed · Grounded ✓
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        {isSelected ? (
+                          <span className="text-xs font-bold text-blue-700 flex items-center gap-1 font-mono bg-white px-2.5 py-1 rounded-md border border-blue-200 shadow-sm">
+                            <Check className="w-3.5 h-3.5" /> Selected
+                          </span>
+                        ) : (
+                          <span className="text-xs font-medium text-slate-400 font-mono px-2 py-1">
+                            Click to add
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
 
-          <div className="flex justify-end">
-            <button
-              onClick={() => setStep(2)}
-              disabled={!selectedDocId}
-              className="btn-primary py-3 px-6 text-sm font-semibold shadow-sm"
-            >
-              Continue to Configuration
-              <ArrowRight className="w-4 h-4" />
-            </button>
+            {/* Selected Materials Metrics Summary Bar */}
+            <div className="p-4 rounded-xl bg-slate-900 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shrink-0">
+                  <Sparkles className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-xs font-bold">
+                    {selectedDocIds.length} Source Document{selectedDocIds.length > 1 ? 's' : ''} Ready for Gemini Synthesis
+                  </div>
+                  <div className="text-[11px] text-slate-400 font-mono">
+                    {totalSelectedPages} Total Pages · {totalSelectedChunks} Knowledge Chunks Context Window
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setStep(2)}
+                  disabled={selectedDocIds.length === 0}
+                  className="px-5 py-2.5 rounded-xl bg-white text-slate-900 text-xs font-bold hover:bg-slate-100 transition-all flex items-center gap-1.5 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  <span>Continue to Configuration</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -374,162 +658,185 @@ export default function CreateAssessmentWizard() {
                 02. Assessment Parameters & Exam Rules
               </h2>
               <p className="text-xs sm:text-sm text-slate-500 mt-1">
-                Configure timing, question volume, difficulty distribution, and proctoring safeguards.
+                Configure timing, question volume, difficulty distribution, and proctoring safeguards across the {selectedDocIds.length} selected material(s).
               </p>
+            </div>
+
+            {/* Selected Sources Preview Badge */}
+            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2">
+              <div className="text-[11px] font-mono font-bold text-slate-500 uppercase">
+                Active Sources for this Quiz ({selectedDocIds.length}):
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {selectedMaterials.map((m) => (
+                  <span
+                    key={m.id}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-white border border-slate-200 text-xs font-semibold text-slate-800 shadow-2xs font-mono"
+                  >
+                    <FileText className="w-3 h-3 text-blue-600" />
+                    <span>{m.title}</span>
+                  </span>
+                ))}
+              </div>
             </div>
 
             <div className="grid sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">
                   Assessment Title
                 </label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="input-academic text-sm"
+                  className="input-academic text-xs"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Module / Topic Focus
+                <label className="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">
+                  Module / Topics Focus
                 </label>
                 <input
                   type="text"
                   value={moduleName}
                   onChange={(e) => setModuleName(e.target.value)}
-                  className="input-academic text-sm"
+                  className="input-academic text-xs"
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Number of Questions
+                <label className="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">
+                  Questions Count
                 </label>
                 <select
                   value={totalQuestions}
                   onChange={(e) => setTotalQuestions(Number(e.target.value))}
-                  className="input-academic text-sm"
+                  className="input-academic text-xs font-mono"
                 >
+                  <option value={5}>5 Questions (Quick Check)</option>
                   <option value={10}>10 Questions</option>
-                  <option value={15}>15 Questions (Recommended)</option>
+                  <option value={15}>15 Questions (Standard IA)</option>
                   <option value={20}>20 Questions</option>
+                  <option value={25}>25 Questions</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Question Difficulty
+                <label className="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">
+                  Difficulty Blend
                 </label>
                 <select
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value as any)}
-                  className="input-academic text-sm"
+                  className="input-academic text-xs font-mono"
                 >
-                  <option value="mixed">Balanced Mix (Easy, Med, Hard)</option>
+                  <option value="mixed">Mixed (Curriculum Standard)</option>
                   <option value="easy">Foundational (Easy)</option>
-                  <option value="medium">Standard University (Medium)</option>
-                  <option value="hard">Rigorous & Analytical (Hard)</option>
+                  <option value="medium">Standard (Medium)</option>
+                  <option value="hard">Rigorous (Hard)</option>
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">
                   Duration (Minutes)
                 </label>
                 <input
                   type="number"
+                  min={1}
+                  max={180}
                   value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                  min={5}
-                  max={120}
-                  className="input-academic text-sm font-mono"
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '') {
+                      setDurationMinutes('');
+                    } else {
+                      const parsed = parseInt(val, 10);
+                      setDurationMinutes(isNaN(parsed) ? '' : parsed);
+                    }
+                  }}
+                  onBlur={() => {
+                    if (durationMinutes === '' || Number(durationMinutes) <= 0) {
+                      setDurationMinutes(15);
+                    } else {
+                      setDurationMinutes(Math.min(180, Math.max(1, Number(durationMinutes))));
+                    }
+                  }}
+                  placeholder="15"
+                  className="input-academic text-xs font-mono"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Marking Scheme
+                <label className="block text-xs font-mono font-bold text-slate-700 uppercase mb-1">
+                  Negative Mark / Q
                 </label>
                 <select
                   value={negativeMarking}
                   onChange={(e) => setNegativeMarking(Number(e.target.value))}
-                  className="input-academic text-sm"
+                  className="input-academic text-xs font-mono"
                 >
-                  <option value={0.25}>+1.0 Correct / -0.25 Negative Marking</option>
-                  <option value={0}>+1.0 Correct / 0 No Negative Marks</option>
-                  <option value={0.33}>+1.0 Correct / -0.33 Negative Marks</option>
+                  <option value={0}>0.00 (No penalty)</option>
+                  <option value={0.25}>-0.25 (Standard 25%)</option>
+                  <option value={0.33}>-0.33 (Strict 33%)</option>
+                  <option value={0.5}>-0.50 (High penalty 50%)</option>
                 </select>
               </div>
             </div>
 
-            {/* Proctoring Safeguards */}
-            <div className="pt-4 border-t border-slate-100 space-y-3">
-              <div className="text-xs font-mono font-bold text-slate-900 uppercase">
-                Controlled Exam Safeguards & Randomization
+            {/* Proctoring & Security Safeguards */}
+            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 space-y-3">
+              <div className="text-xs font-mono font-bold uppercase text-slate-700 flex items-center gap-1.5">
+                <Shield className="w-4 h-4 text-emerald-600" />
+                <span>Supervision & Anti-Cheat Parameters</span>
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3 text-xs">
-                <label className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:border-slate-300 transition-all">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={requireFullscreen}
                     onChange={(e) => setRequireFullscreen(e.target.checked)}
-                    className="rounded text-slate-900 mt-0.5"
+                    className="rounded border-slate-300 text-slate-900"
                   />
-                  <div>
-                    <strong className="text-slate-900 block">Full-Screen 2-Strike Mode</strong>
-                    <div className="text-slate-500 text-[11px] mt-0.5">
-                      Strike 1 warning modal; Strike 2 immediate server-side auto-submission.
-                    </div>
-                  </div>
+                  <span>Enforce Full-Screen with 2-Strike Violation Limit</span>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:border-slate-300 transition-all">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={randomizeQuestions}
                     onChange={(e) => setRandomizeQuestions(e.target.checked)}
-                    className="rounded text-slate-900 mt-0.5"
+                    className="rounded border-slate-300 text-slate-900"
                   />
-                  <div>
-                    <strong className="text-slate-900 block">Randomize Question Sequence</strong>
-                    <div className="text-slate-500 text-[11px] mt-0.5">
-                      Each student receives a unique randomized question order.
-                    </div>
-                  </div>
+                  <span>Randomize Question Order per Examinee</span>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:border-slate-300 transition-all">
+                <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={randomizeOptions}
                     onChange={(e) => setRandomizeOptions(e.target.checked)}
-                    className="rounded text-slate-900 mt-0.5"
+                    className="rounded border-slate-300 text-slate-900"
                   />
-                  <div>
-                    <strong className="text-slate-900 block">Randomize Option Order</strong>
-                    <div className="text-slate-500 text-[11px] mt-0.5">
-                      Stable IDs map choices safely across randomized displays.
-                    </div>
-                  </div>
+                  <span>Shuffle Answer Options (A/B/C/D)</span>
                 </label>
 
-                <label className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 bg-slate-50/50 cursor-pointer hover:border-slate-300 transition-all">
-                  <div className="w-full">
-                    <strong className="text-slate-900 block mb-1">Leaderboard Policy</strong>
-                    <select
-                      value={showLeaderboard}
-                      onChange={(e) => setShowLeaderboard(e.target.value as any)}
-                      className="input-academic text-xs py-1.5"
-                    >
-                      <option value="PUBLIC">Public to Participants</option>
-                      <option value="ANONYMOUS">Anonymous (Show Rank Only)</option>
-                      <option value="DISABLED">Disabled</option>
-                    </select>
-                  </div>
-                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-slate-500 font-mono">Leaderboard:</span>
+                  <select
+                    value={showLeaderboard}
+                    onChange={(e) => setShowLeaderboard(e.target.value as any)}
+                    className="px-2 py-1 text-xs border rounded-lg bg-white"
+                  >
+                    <option value="PUBLIC">Public Ranks</option>
+                    <option value="ANONYMOUS">Anonymous (Roll No Only)</option>
+                    <option value="DISABLED">Faculty Only</option>
+                  </select>
+                </div>
               </div>
             </div>
           </div>
@@ -537,316 +844,303 @@ export default function CreateAssessmentWizard() {
           <div className="flex items-center justify-between">
             <button
               onClick={() => setStep(1)}
-              className="btn-secondary py-2.5 px-4 text-xs font-semibold"
+              className="btn-secondary py-3 px-5 text-sm font-semibold flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to Material
+              <ArrowLeft className="w-4 h-4" />
+              Back to Materials
             </button>
             <button
               onClick={runGeneration}
-              className="btn-primary py-3 px-6 text-sm font-semibold shadow-sm"
+              className="btn-primary py-3 px-6 text-sm font-semibold shadow-sm flex items-center gap-2"
             >
               <Sparkles className="w-4 h-4 text-amber-300" />
-              Generate Questions with Gemini Flash
+              <span>Generate Questions with Gemini Flash</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 3: GENERATION PROGRESS STATE */}
+      {/* STEP 3: LIVE GENERATION STAGES */}
       {step === 3 && (
-        <div className="p-12 rounded-2xl bg-white border border-slate-200 shadow-card text-center max-w-xl mx-auto space-y-6">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 mx-auto shadow-sm">
-            <RefreshCw className="w-7 h-7 animate-spin text-indigo-600" />
+        <div className="p-8 sm:p-12 rounded-2xl bg-white border border-slate-200 shadow-card text-center space-y-8 max-w-2xl mx-auto">
+          <div className="relative mx-auto w-16 h-16">
+            <div className="w-16 h-16 rounded-3xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
+              <Sparkles className="w-8 h-8 text-amber-300 animate-spin" />
+            </div>
+            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-600"></span>
+            </span>
           </div>
 
-          <div>
-            <span className="text-xs font-mono font-bold uppercase text-indigo-600 tracking-wider">
-              Gemini Flash RAG Generator
-            </span>
-            <h2 className="text-2xl font-extrabold text-slate-900 mt-1">
-              Generating Grounded Assessment
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-mono font-bold uppercase tracking-wider border border-blue-200">
+              <span>RAG SYNTHESIS ENGINE</span>
+              <span>·</span>
+              <span>{generationProgress}% COMPLETE</span>
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900">
+              Generating Grounded Questions from {selectedDocIds.length} Material(s)
             </h2>
-            <p className="text-xs text-slate-500 mt-1 font-mono">
-              Course: {courseCode} · {moduleName}
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Extracting key concepts across chapters, verifying candidate propositions, and constructing deterministic distractors.
             </p>
           </div>
 
-          {/* Progress Stages */}
-          <div className="space-y-3 text-left p-5 rounded-xl bg-slate-50 border border-slate-200 text-xs">
-            {generationStages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`flex items-center gap-3 ${
-                  idx < generationStage
-                    ? 'text-emerald-700 font-semibold'
-                    : idx === generationStage
-                    ? 'text-indigo-700 font-bold animate-pulse'
-                    : 'text-slate-400'
-                }`}
-              >
-                {idx < generationStage ? (
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                ) : idx === generationStage ? (
-                  <RefreshCw className="w-4 h-4 text-indigo-600 animate-spin shrink-0" />
-                ) : (
-                  <div className="w-4 h-4 rounded-full border border-slate-300 shrink-0" />
-                )}
-                <span>{msg}</span>
-              </div>
-            ))}
+          {/* Animated Gradient Progress Bar */}
+          <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden p-0.5 border border-slate-200">
+            <div
+              className="bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500 h-full rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${generationProgress}%` }}
+            />
           </div>
 
-          <div className="text-[11px] text-slate-400 font-mono">
-            Zero-hallucination prompt grounding active · Model: Gemini Flash
+          {/* Progress Steps Indicator */}
+          <div className="space-y-2.5 text-left">
+            {generationStages.map((stageText, idx) => (
+              <div
+                key={idx}
+                className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all ${
+                  generationStage > idx
+                    ? 'border-emerald-200 bg-emerald-50/60 text-emerald-950 font-medium'
+                    : generationStage === idx
+                    ? 'border-blue-500 bg-blue-50/70 text-blue-950 font-bold shadow-2xs'
+                    : 'border-slate-100 bg-slate-50/40 text-slate-400 opacity-60'
+                }`}
+              >
+                <div
+                  className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono shrink-0 ${
+                    generationStage > idx
+                      ? 'bg-emerald-600 text-white'
+                      : generationStage === idx
+                      ? 'bg-blue-600 text-white animate-pulse'
+                      : 'bg-slate-200 text-slate-500'
+                  }`}
+                >
+                  {generationStage > idx ? '✓' : idx + 1}
+                </div>
+                <span className="text-xs">{stageText}</span>
+              </div>
+            ))}
           </div>
         </div>
       )}
 
-      {/* STEP 4: REVIEW & QUALITY CONTROL */}
+      {/* STEP 4: REVIEW & EDIT QUESTIONS */}
       {step === 4 && (
         <div className="space-y-6">
-          {/* Quality Control Header */}
-          <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 text-emerald-800 font-bold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-              <span>Quality Control: {questions.length}/{questions.length} Questions Verified & Grounded</span>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-bold text-slate-900">
+                04. Review & Validate Generated Questions ({questions.length})
+              </h2>
+              <p className="text-xs text-slate-500">
+                Source citations attached to every question. Edit text, regenerate specific items, or adjust answer keys.
+              </p>
             </div>
-            <div className="text-emerald-700 font-mono text-[11px] font-semibold">
-              0 Duplicates • Verified Option Sets • Exact Citations
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setStep(2)}
+                className="btn-secondary py-2 px-3 text-xs font-semibold"
+              >
+                Re-Configure
+              </button>
+              <button
+                onClick={handlePublish}
+                disabled={isPublishing || questions.length === 0}
+                className="btn-primary py-2 px-4 text-xs font-bold shadow-sm flex items-center gap-1.5"
+              >
+                <span>{isPublishing ? 'Publishing Room...' : 'Publish Assessment & Open Room'}</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
-          {/* Questions Review List */}
+          {/* Question Cards List */}
           <div className="space-y-4">
             {questions.map((q, idx) => (
               <div
                 key={q.id}
-                className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4 hover:border-slate-300 transition-all"
+                className="p-5 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex items-start gap-3">
-                    <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">
-                      Q{idx + 1 < 10 ? `0${idx + 1}` : idx + 1}
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-mono font-bold text-xs">
+                      {idx + 1}
                     </span>
-                    <div>
-                      <h3 className="text-sm font-bold text-slate-900 leading-snug">
-                        {q.questionText}
-                      </h3>
-                      <div className="flex items-center gap-3 text-[11px] text-slate-500 mt-1">
-                        <span>Topic: <strong className="text-slate-700">{q.topic}</strong></span>
-                        <span>• Difficulty: <strong className="capitalize text-slate-700">{q.difficulty}</strong></span>
-                      </div>
-                    </div>
+                    <span className="text-xs font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
+                      {q.topic}
+                    </span>
+                    <span
+                      className={`text-[10px] font-mono font-bold uppercase px-2 py-0.5 rounded-full ${
+                        q.difficulty === 'easy'
+                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                          : q.difficulty === 'hard'
+                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                          : 'bg-blue-50 text-blue-700 border border-blue-200'
+                      }`}
+                    >
+                      {q.difficulty}
+                    </span>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      onClick={() => setRegenerateModalQ(q)}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-indigo-600 transition-colors"
-                      title="Regenerate single question"
-                    >
-                      <RefreshCw className="w-4 h-4" />
-                    </button>
+                  <div className="flex items-center gap-1">
                     <button
                       onClick={() => setEditingQuestion(q)}
-                      className="p-2 rounded-lg hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors"
-                      title="Edit question text and answers"
+                      className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                      title="Edit question text and options"
                     >
-                      <Edit2 className="w-4 h-4" />
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setRegenerateModalQ(q)}
+                      className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                      title="Regenerate this specific question with custom instruction"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => handleDeleteQuestion(q.id)}
-                      className="p-2 rounded-lg hover:bg-rose-50 text-slate-600 hover:text-rose-600 transition-colors"
+                      className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
                       title="Delete question"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
-                {/* Options List */}
-                <div className="grid sm:grid-cols-2 gap-2 text-xs pt-1">
-                  {q.options.map((opt, optIdx) => {
-                    const isCorrect = opt.id === q.correctOptionId;
-                    return (
-                      <div
-                        key={opt.id}
-                        className={`p-3 rounded-xl border flex items-center justify-between ${
-                          isCorrect
-                            ? 'border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold'
-                            : 'border-slate-200 bg-slate-50/60 text-slate-800'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 truncate">
-                          <span className="font-mono text-xs font-bold text-slate-500">
-                            {String.fromCharCode(65 + optIdx)}.
-                          </span>
-                          <span className="truncate">{opt.text}</span>
-                        </div>
-                        {isCorrect && (
-                          <span className="text-[10px] font-mono uppercase bg-emerald-600 text-white px-2 py-0.5 rounded-full font-bold">
-                            Correct
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })}
+                <div className="text-sm font-semibold text-slate-900 leading-snug">
+                  {q.questionText}
                 </div>
 
-                {/* Grounding Source Citation */}
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center justify-between font-mono">
-                  <div className="flex items-center gap-2 truncate">
-                    <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
-                    <span className="truncate">
-                      Source: {q.sourceCitation.documentTitle} · Page {q.sourceCitation.pageNumber} · {q.sourceCitation.sectionTitle || 'Section'}
-                    </span>
+                {/* Options Grid */}
+                <div className="grid sm:grid-cols-2 gap-2 text-xs">
+                  {q.options.map((opt, optIdx) => (
+                    <div
+                      key={opt.id}
+                      className={`p-2.5 rounded-xl border flex items-center gap-2 ${
+                        q.correctOptionId === opt.id
+                          ? 'border-emerald-500 bg-emerald-50/40 text-emerald-950 font-semibold'
+                          : 'border-slate-200 bg-slate-50/50 text-slate-700'
+                      }`}
+                    >
+                      <span className="w-5 h-5 rounded-full bg-white border border-slate-300 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
+                        {String.fromCharCode(65 + optIdx)}
+                      </span>
+                      <span>{opt.text}</span>
+                      {q.correctOptionId === opt.id && (
+                        <Check className="w-3.5 h-3.5 text-emerald-600 ml-auto shrink-0" />
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Source Citation & Explanation */}
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-1.5 text-xs">
+                  <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-blue-700">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Grounding Source: {q.sourceCitation.documentTitle} (Page {q.sourceCitation.pageNumber})</span>
                   </div>
-                  <span className="text-emerald-700 shrink-0 font-bold text-[10px]">Verified Grounding ✓</span>
+                  <p className="text-slate-600 text-[11px] italic">
+                    &quot;{q.sourceCitation.excerpt}&quot;
+                  </p>
+                  <div className="text-slate-500 text-[11px] pt-1 border-t border-slate-200/60">
+                    <strong className="text-slate-700">Explanation:</strong> {q.explanation}
+                  </div>
                 </div>
               </div>
             ))}
           </div>
 
-          <div className="flex items-center justify-between pt-4">
+          <div className="flex items-center justify-between pt-4 border-t border-slate-200">
             <button
               onClick={() => setStep(2)}
-              className="btn-secondary py-2.5 px-4 text-xs font-semibold"
+              className="btn-secondary py-3 px-5 text-sm font-semibold flex items-center gap-1.5"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to Config
+              <ArrowLeft className="w-4 h-4" />
+              Adjust Parameters
             </button>
             <button
               onClick={handlePublish}
               disabled={isPublishing || questions.length === 0}
-              className="btn-primary py-3 px-6 text-sm font-semibold shadow-sm"
+              className="btn-primary py-3 px-8 text-sm font-bold shadow-md flex items-center gap-2"
             >
-              {isPublishing ? 'Publishing & Generating Room...' : 'Publish Assessment & Open Room'}
+              <span>{isPublishing ? 'Opening Room...' : 'Publish Assessment & Launch Live Room'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* STEP 5: PUBLISHED & LIVE ROOM CODE */}
+      {/* STEP 5: ASSESSMENT PUBLISHED & LIVE ROOM CODE */}
       {step === 5 && (
-        <div className="p-8 sm:p-12 rounded-2xl bg-white border border-slate-200 shadow-card text-center max-w-xl mx-auto space-y-6">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 mx-auto shadow-sm">
-            <CheckCircle2 className="w-8 h-8" />
+        <div className="p-8 sm:p-12 rounded-2xl bg-white border border-slate-200 shadow-card text-center space-y-8 max-w-2xl mx-auto">
+          <div className="w-16 h-16 rounded-3xl bg-emerald-600 text-white mx-auto flex items-center justify-center shadow-lg">
+            <Check className="w-8 h-8 stroke-[3]" />
           </div>
 
-          <div>
-            <span className="text-xs font-mono uppercase tracking-wider text-emerald-700 font-bold">
-              Assessment Published Successfully
+          <div className="space-y-2">
+            <span className="px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+              ROOM IS LIVE & ACCEPTING EXAMINEES
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-              Live Room is Ready
+            <h2 className="text-2xl font-extrabold text-slate-900">
+              Assessment Successfully Created
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-md mx-auto">
-              Share this 6-character room code with your students in class or project it on the lecture hall screen.
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
+              Share this 6-character room code with your students to begin the proctored exam session.
             </p>
           </div>
 
-          {/* Room Code Display Box */}
-          <div className="p-6 rounded-2xl bg-slate-900 text-white shadow-card max-w-sm mx-auto space-y-3">
-            <div className="text-[11px] text-slate-400 uppercase font-mono font-semibold">CLASSROOM ROOM CODE</div>
-            <div className="text-4xl font-mono font-extrabold tracking-widest text-amber-300">
+          {/* Large Room Code Box */}
+          <div className="p-6 rounded-2xl bg-slate-900 text-white space-y-3 shadow-xl">
+            <div className="text-xs font-mono text-slate-400 uppercase tracking-wider">
+              Student Join Room Code
+            </div>
+            <div className="text-4xl sm:text-5xl font-mono font-black tracking-widest text-amber-300">
               {generatedRoomCode}
             </div>
             <button
               onClick={copyRoomCode}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-white transition-colors"
+              className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-mono font-bold transition-colors inline-flex items-center gap-1.5"
             >
-              {isCopied ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              {isCopied ? 'Room Code Copied!' : 'Copy Room Code'}
+              <Copy className="w-3.5 h-3.5" />
+              <span>{isCopied ? 'Copied to Clipboard!' : 'Copy Code & Link'}</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 text-xs text-slate-600 max-w-sm mx-auto text-left font-mono">
-            <div>• Questions: {questions.length} MCQs</div>
-            <div>• Duration: {durationMinutes} Minutes</div>
-            <div>• Fullscreen: 2-Strike Enforced</div>
-            <div>• Leaderboard: {showLeaderboard}</div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {/* Action CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-4 border-t border-slate-100">
             <Link
               href={`/teacher/rooms/${generatedRoomCode}`}
-              className="w-full sm:w-auto btn-primary py-3 px-6 text-sm font-semibold shadow-sm"
+              className="w-full sm:w-auto btn-primary py-3 px-6 text-xs font-bold shadow-sm flex items-center justify-center gap-2"
             >
-              Open Live Room Console
-              <ArrowRight className="w-4 h-4" />
+              <span>Open Live Room Console</span>
+              <ExternalLink className="w-4 h-4" />
             </Link>
             <Link
               href="/teacher/dashboard"
-              className="w-full sm:w-auto btn-secondary py-3 px-4 text-xs font-semibold"
+              className="w-full sm:w-auto btn-secondary py-3 px-6 text-xs font-semibold"
             >
-              Back to Overview
+              Return to Overview
             </Link>
           </div>
         </div>
       )}
 
-      {/* Single Question Regeneration Modal */}
-      {regenerateModalQ && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-modal max-w-lg w-full p-6 space-y-4">
-            <div>
-              <div className="text-xs font-mono font-bold uppercase text-indigo-600">Gemini Flash AI</div>
-              <h3 className="text-base font-bold text-slate-900 mt-0.5">
-                Regenerate Targeted Question
-              </h3>
-              <p className="text-xs text-slate-500">
-                Gemini will regenerate this specific item grounded in the course syllabus.
-              </p>
-            </div>
-
-            <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-800">
-              <strong>Current:</strong> {regenerateModalQ.questionText}
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
-                Optional Pedagogical Directive
-              </label>
-              <input
-                type="text"
-                value={regeneratePrompt}
-                onChange={(e) => setRegeneratePrompt(e.target.value)}
-                placeholder="e.g. Make this more conceptual / Focus on 3NF trade-offs"
-                className="input-academic text-xs"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2">
-              <button
-                onClick={() => setRegenerateModalQ(null)}
-                className="btn-secondary py-2 px-3 text-xs font-semibold"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleRegenerateQuestion}
-                disabled={isRegenerating}
-                className="btn-primary py-2 px-4 text-xs font-semibold"
-              >
-                {isRegenerating ? 'Regenerating...' : 'Regenerate Question'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Manual Edit Question Modal */}
+      {/* Question Edit Modal */}
       {editingQuestion && (
-        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-xs">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-modal max-w-xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">
-                Edit Question Details
-              </h3>
-              <p className="text-xs text-slate-500 mt-0.5">
-                Modify text, answer options, or correct selection.
-              </p>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full p-6 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <h3 className="text-sm font-bold text-slate-900">Edit Question Details</h3>
+              <button
+                onClick={() => setEditingQuestion(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-900"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
             <div>

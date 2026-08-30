@@ -72,16 +72,17 @@ export default function TeacherQuestionBankPage() {
       </div>
 
       {/* Filter & Search Bar */}
-      <div className="p-4 rounded-xl bg-white border border-[#E5E5E0] shadow-subtle grid sm:grid-cols-12 gap-3 text-xs">
-        <div className="sm:col-span-6 relative">
+      <div className="p-4 rounded-xl bg-white dark:bg-[#0A0A0A] border border-slate-200 dark:border-zinc-800 shadow-sm grid sm:grid-cols-12 gap-3 text-xs">
+        <div className="sm:col-span-6 relative flex items-center">
+          <Search className="w-4 h-4 text-slate-400 dark:text-zinc-500 absolute left-3.5 pointer-events-none z-10" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search questions or keywords..."
-            className="input-academic pl-8 text-xs"
+            className="input-academic text-xs"
+            style={{ paddingLeft: '2.5rem' }}
           />
-          <Search className="w-4 h-4 text-[#8C8C87] absolute left-2.5 top-2.5" />
         </div>
 
         <div className="sm:col-span-3">

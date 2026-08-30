@@ -3,8 +3,22 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import Navbar from '@/components/Navbar';
-import Logo from '@/components/Logo';
+import FooterCTA from '@/components/FooterCTA';
+import { ContainerScroll } from '@/components/ui/container-scroll-animation';
+import { BentoGridShowcase } from '@/components/ui/bento-product-features';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
   FileText,
   Shield,
@@ -25,22 +39,61 @@ import {
   Radio,
   ExternalLink,
   Zap,
+  Check,
+  ChevronRight,
+  KeyRound,
+  Shuffle,
+  Timer,
+  BookMarked,
+  Play,
 } from 'lucide-react';
 
 export default function LandingPage() {
+  const router = useRouter();
   const [activePreviewTab, setActivePreviewTab] = useState<'teacher' | 'room' | 'student' | 'grounding'>('teacher');
+  const [studentCode, setStudentCode] = useState('');
+  const [showCitations, setShowCitations] = useState(true);
+
+  // Smooth interactive 3D tilt physics for Hero Showcase (Fixed size, pure tilt)
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [6, -6]), { damping: 20, stiffness: 120 });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-6, 6]), { damping: 20, stiffness: 120 });
+
+  const handleHeroMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xPct = (e.clientX - rect.left) / rect.width - 0.5;
+    const yPct = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(xPct);
+    mouseY.set(yPct);
+  };
+
+  const handleHeroMouseLeave = () => {
+    mouseX.set(0);
+    mouseY.set(0);
+  };
+
+  const handleStudentJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    const code = studentCode.trim().toUpperCase();
+    if (code) {
+      router.push(`/exam/${code}`);
+    } else {
+      router.push('/student');
+    }
+  };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900 bg-grid-subtle">
+    <div className="min-h-screen flex flex-col bg-[#F8FAFC] dark:bg-[#000000] text-slate-900 dark:text-white bg-grid-subtle transition-colors duration-200">
       <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-10 sm:pt-14 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="grid lg:grid-cols-12 gap-8 lg:gap-8 items-center mb-14">
+      <section className="pt-6 sm:pt-8 pb-6 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="grid lg:grid-cols-12 gap-6 lg:gap-8 items-center">
           {/* Left Column: Headline & Actions */}
-          <div className="lg:col-span-6 space-y-6">
+          <div className="lg:col-span-6 space-y-5">
             {/* Announcement Chip with subtle blinking green dot */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/90 border border-blue-200/90 text-blue-700 text-xs font-bold tracking-tight shadow-xs hover:border-blue-300 transition-all">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-50/90 dark:bg-zinc-900 border border-blue-200/90 dark:border-zinc-800 text-blue-700 dark:text-zinc-200 text-xs font-bold tracking-tight shadow-xs hover:border-blue-300 transition-all">
               <span className="relative flex h-2 w-2 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -60,501 +113,543 @@ export default function LandingPage() {
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.1]">
-              Assessment, built for the <span className="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 bg-clip-text text-transparent underline decoration-blue-400/60 decoration-wavy decoration-1">classroom</span>.
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-[1.1]">
+              Assessment, built for the <span className="bg-gradient-to-r from-blue-700 via-indigo-800 to-slate-900 dark:from-zinc-100 dark:via-zinc-300 dark:to-white bg-clip-text text-transparent underline decoration-blue-400/60 decoration-wavy decoration-1">classroom</span><span className="text-emerald-500">.</span>
             </h1>
 
             {/* Supporting Copy */}
-            <p className="text-base sm:text-lg text-slate-600 leading-relaxed font-normal max-w-2xl">
-              Create source-grounded quizzes directly from your course syllabus, run secure live assessments with authoritative 2-strike proctoring, and turn every test into structured learning with <strong className="text-slate-900 font-bold">QuizSom</strong>.
+            <p className="text-base sm:text-lg text-slate-600 dark:text-zinc-400 leading-relaxed font-normal max-w-2xl">
+              Create source-grounded quizzes directly from your course syllabus, run secure live assessments with authoritative 2-strike proctoring, and turn every test into structured learning with <strong className="text-slate-900 dark:text-white font-bold">QuizSom</strong>.
             </p>
 
             {/* Dual Path Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3.5 pt-2">
+            <div className="flex flex-wrap items-center gap-3.5 pt-1">
               <Link
                 href="/teacher/dashboard"
-                className="px-6 py-3.5 rounded-xl bg-slate-900 text-white font-semibold text-sm hover:bg-slate-800 transition-all flex items-center gap-2 shadow-sm hover:shadow hover:-translate-y-0.5"
+                className="px-6 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-semibold text-sm transition-all flex items-center gap-2 shadow-sm hover:shadow hover:-translate-y-0.5"
               >
                 Faculty Portal
-                <ArrowRight className="w-4 h-4 text-white/80" />
+                <ArrowRight className="w-4 h-4 text-white/80 dark:text-black" />
               </Link>
               <Link
                 href="/student"
-                className="px-6 py-3.5 rounded-xl bg-white text-slate-900 font-semibold text-sm border border-slate-200 hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center gap-2 shadow-sm hover:-translate-y-0.5"
+                className="px-6 py-3 rounded-xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white font-semibold text-sm border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 hover:border-slate-300 transition-all flex items-center gap-2 shadow-sm hover:-translate-y-0.5"
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
                 Student Access (Room Code)
               </Link>
             </div>
-
-            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 font-mono pt-1">
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-sm">
-                <span className="text-slate-400">Pre-seeded Room:</span>
-                <strong className="text-slate-900 font-bold">DEMO26</strong>
-              </span>
-              <span className="flex items-center gap-1.5 bg-white px-2.5 py-1 rounded-md border border-slate-200 shadow-sm">
-                <span className="text-slate-400">Course:</span>
-                <strong className="text-slate-900">CS301 DBMS</strong>
-              </span>
-            </div>
           </div>
 
-          {/* Right Column: Clean Seamless 4K 3D Hero Showcase Image */}
-          <div className="lg:col-span-6 flex items-center justify-center lg:justify-end relative">
-            <div className="relative w-full max-w-xl lg:max-w-2xl">
+          {/* Right Column: Clean Seamless 4K 3D Hero Showcase Image with Interactive 3D Perspective Tilt */}
+          <div
+            className="lg:col-span-6 flex items-center justify-center lg:justify-end relative cursor-pointer"
+            style={{ perspective: 1200 }}
+            onMouseMove={handleHeroMouseMove}
+            onMouseLeave={handleHeroMouseLeave}
+          >
+            <motion.div
+              style={{
+                rotateX,
+                rotateY,
+                transformStyle: 'preserve-3d',
+              }}
+              className="relative w-full max-w-xl lg:max-w-2xl select-none"
+            >
               <Image
                 src="/hero-illustration.png"
                 alt="QuizSom Assessment Platform 3D Showcase"
                 width={4096}
                 height={2728}
-                className="w-full h-auto object-contain select-none"
+                className="w-full h-auto object-contain drop-shadow-xl"
                 unoptimized
                 priority
               />
-            </div>
-          </div>
-        </div>
-
-        {/* Interactive Preview Sandbox */}
-        <div id="preview" className="mt-8 w-full rounded-2xl border border-slate-200 bg-white shadow-card overflow-hidden">
-          {/* Top Bar with Apple Traffic Light Window Controls */}
-          <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-            <div className="flex items-center gap-2 font-mono group/traffic">
-              {/* Apple Red - Close / Cross */}
-              <div className="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E] flex items-center justify-center text-[#4C0000] shadow-xs cursor-pointer">
-                <svg className="w-1.5 h-1.5 opacity-70 group-hover/traffic:opacity-100 transition-opacity" viewBox="0 0 6 6" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
-                  <path d="M1 1L5 5M5 1L1 5" />
-                </svg>
-              </div>
-
-              {/* Apple Yellow - Minimize / Minus */}
-              <div className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123] flex items-center justify-center text-[#5A3F00] shadow-xs cursor-pointer">
-                <svg className="w-1.5 h-1.5 opacity-70 group-hover/traffic:opacity-100 transition-opacity" viewBox="0 0 6 6" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
-                  <path d="M1 3H5" />
-                </svg>
-              </div>
-
-              {/* Apple Green - Fullscreen / Expand */}
-              <div className="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29] flex items-center justify-center text-[#004D0D] shadow-xs cursor-pointer">
-                <svg className="w-1.5 h-1.5 opacity-70 group-hover/traffic:opacity-100 transition-opacity" viewBox="0 0 6 6" fill="currentColor">
-                  <path d="M1 1.5L3 1.5L1 3.5V1.5ZM5 4.5L3 4.5L5 2.5V4.5Z" />
-                </svg>
-              </div>
-
-              <span className="ml-2 font-medium text-slate-700">quizsom.internal/preview</span>
-            </div>
-
-            {/* Interactive Tab Switcher */}
-            <div className="flex items-center gap-1 bg-white p-1 rounded-lg border border-slate-200">
-              <button
-                onClick={() => setActivePreviewTab('teacher')}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                  activePreviewTab === 'teacher'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Faculty View
-              </button>
-              <button
-                onClick={() => setActivePreviewTab('room')}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                  activePreviewTab === 'room'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Live Room
-              </button>
-              <button
-                onClick={() => setActivePreviewTab('student')}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                  activePreviewTab === 'student'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Exam Screen
-              </button>
-              <button
-                onClick={() => setActivePreviewTab('grounding')}
-                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
-                  activePreviewTab === 'grounding'
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                Grounding
-              </button>
-            </div>
-          </div>
-
-          {/* Interactive Preview Content */}
-          <div className="p-6 sm:p-8 bg-white min-h-[360px]">
-            {activePreviewTab === 'teacher' && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
-                        CS301
-                      </span>
-                      <h3 className="text-lg font-bold text-slate-900">Database Management Systems — IA 01</h3>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1">Module 2: Relational Model & Schema Normalization</p>
-                  </div>
-                  <div className="flex items-center gap-4 text-xs font-mono">
-                    <div>
-                      <div className="text-[10px] text-slate-400">ROOM CODE</div>
-                      <div className="text-base font-bold text-slate-900">DEMO26</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] text-slate-400">STUDENTS</div>
-                      <div className="text-base font-bold text-emerald-600">48 Enrolled</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100"><div className="text-xs text-slate-500 font-medium">Class Average</div><div className="text-2xl font-bold text-slate-900 mt-1">72%</div><div className="text-[11px] text-emerald-600 font-semibold mt-0.5">+4% vs Pre-Test</div></div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100"><div className="text-xs text-slate-500 font-medium">Median Score</div><div className="text-2xl font-bold text-slate-900 mt-1">74%</div><div className="text-[11px] text-slate-500 mt-0.5">Highest: 96% · Lowest: 38%</div></div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100"><div className="text-xs text-slate-500 font-medium">Turnout</div><div className="text-2xl font-bold text-slate-900 mt-1">48 / 48</div><div className="text-[11px] text-emerald-600 font-semibold mt-0.5">100% Completion</div></div>
-                  <div className="p-4 rounded-xl bg-slate-50 border border-slate-100"><div className="text-xs text-slate-500 font-medium">Integrity Events</div><div className="text-2xl font-bold text-amber-600 mt-1">3 Logged</div><div className="text-[11px] text-slate-500 mt-0.5">1 Auto-submit (Strike 2)</div></div>
-                </div>
-
-                <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-4 h-4 relative shrink-0">
-                      <Image src="/gemini-star.png" alt="Gemini" width={16} height={16} className="object-contain" unoptimized />
-                    </div>
-                    <span className="text-slate-700">
-                      <strong>AI Pedagogical Insight:</strong> Students showed 88% retention on 1NF/2NF definitions, but 61% accuracy on 3NF vs BCNF dependency preservation trade-offs.
-                    </span>
-                  </div>
-                  <Link href="/teacher/dashboard" className="text-blue-600 font-bold hover:underline shrink-0 ml-4">
-                    Open Full Dashboard →
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {activePreviewTab === 'room' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                    <span className="text-xs font-bold uppercase font-mono text-emerald-700">Live Room Telemetry Stream</span>
-                  </div>
-                  <span className="text-xs font-mono text-slate-500">Room Code: DEMO26</span>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="p-3 rounded-lg border border-slate-200 bg-white flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-slate-100 font-mono text-[10px] font-bold flex items-center justify-center">AI</span>
-                      <div>
-                        <strong className="text-slate-900">Ananya Iyer</strong>
-                        <span className="text-slate-400 font-mono ml-2">2024CS1012</span>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                      Submitted · 96% (08:41)
-                    </span>
-                  </div>
-
-                  <div className="p-3 rounded-lg border border-amber-200 bg-amber-50/50 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-amber-100 font-mono text-[10px] font-bold text-amber-800 flex items-center justify-center">RP</span>
-                      <div>
-                        <strong className="text-slate-900">Rohan Patil</strong>
-                        <span className="text-slate-400 font-mono ml-2">2024CS1089</span>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-100 text-amber-800 border border-amber-300">
-                      1 Full-screen Exit (Warned)
-                    </span>
-                  </div>
-
-                  <div className="p-3 rounded-lg border border-rose-200 bg-rose-50/50 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="w-6 h-6 rounded-full bg-rose-100 font-mono text-[10px] font-bold text-rose-800 flex items-center justify-center">PS</span>
-                      <div>
-                        <strong className="text-slate-900">Priya Shah</strong>
-                        <span className="text-slate-400 font-mono ml-2">2024CS1064</span>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-rose-100 text-rose-800 border border-rose-300">
-                      Auto-Submitted (Strike 2 Exceeded)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="text-right pt-2">
-                  <Link href="/teacher/rooms/DEMO26" className="text-xs font-bold text-slate-900 hover:underline">
-                    View Live Room Console →
-                  </Link>
-                </div>
-              </div>
-            )}
-
-            {activePreviewTab === 'student' && (
-              <div className="space-y-4 max-w-xl mx-auto">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-100 text-xs">
-                  <span className="font-mono font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded">
-                    QUESTION 7 OF 15
-                  </span>
-                  <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 bg-slate-100 px-2.5 py-1 rounded">
-                    <Clock className="w-3.5 h-3.5 text-slate-500" />
-                    <span>08:41</span>
-                  </div>
-                </div>
-
-                <div className="text-sm font-bold text-slate-900">
-                  Which normal form specifically requires eliminating partial functional dependencies?
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-white border border-slate-200">A</span>
-                    <span>First Normal Form (1NF)</span>
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-900 bg-slate-900 text-white font-medium flex items-center justify-between shadow-sm">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-slate-800 text-white">B</span>
-                      <span>Second Normal Form (2NF)</span>
-                    </div>
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                  </div>
-                  <div className="p-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-700 flex items-center gap-2">
-                    <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-white border border-slate-200">C</span>
-                    <span>Third Normal Form (3NF)</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activePreviewTab === 'grounding' && (
-              <div className="space-y-4">
-                <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-xs space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-blue-700">RAG CONTEXT CITATION</span>
-                    <span className="text-[10px] font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">Verified Grounding</span>
-                  </div>
-                  <div className="text-slate-900 font-semibold">
-                    Document: DBMS Module 2: Relational Model & Normalization (PDF)
-                  </div>
-                  <div className="text-slate-600 font-mono text-[11px] bg-white p-3 rounded-lg border border-slate-200">
-                    &quot;Section 3: Second Normal Form (2NF). A relation schema R is in 2NF if it is in 1NF and every non-prime attribute is fully functionally dependent on every candidate key, strictly eliminating partial dependencies.&quot;
-                  </div>
-                  <div className="text-[11px] text-slate-500 font-mono">
-                    Page 3 · Section 3 · Chunks indexed: 4
-                  </div>
-                </div>
-              </div>
-            )}
+            </motion.div>
           </div>
         </div>
       </section>
 
-      {/* Dual Login Paths Bento */}
-      <section className="py-16 bg-white border-y border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-xl mx-auto text-center mb-10">
-            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              Select your academic portal
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Purpose-built interfaces for university instructors and examinees.
-            </p>
+      {/* Subtle Section Divider */}
+      <div className="w-full border-t border-slate-200/80 dark:border-zinc-800/80" />
+
+      {/* Academic Portals Dual Box Section */}
+      <section id="portals" className="py-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full scroll-mt-20">
+        {/* Section Header */}
+        <div className="max-w-xl mx-auto text-center mb-6">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/70 dark:bg-zinc-900 border border-slate-300/60 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 text-[11px] font-mono font-semibold uppercase tracking-wider mb-2 shadow-xs">
+            <Sparkles className="w-3 h-3 text-blue-500 dark:text-zinc-300" />
+            Academic Portals
           </div>
-
-          <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-            {/* Teacher Panel */}
-            <div className="p-8 rounded-2xl bg-gradient-to-b from-white to-slate-50 border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-700 mb-5">
-                  <BookOpen className="w-5 h-5" />
-                </div>
-                <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-1 font-semibold">Faculty & Evaluators</div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Teacher Portal</h3>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                  Upload syllabus PDFs, generate source-grounded questions with Gemini Flash, review QA drafts, launch live rooms, and inspect class integrity reports.
-                </p>
-              </div>
-              <div>
-                <Link
-                  href="/teacher/dashboard"
-                  className="w-full py-3 px-4 rounded-xl bg-slate-900 text-white font-semibold text-xs sm:text-sm hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-sm"
-                >
-                  Enter Faculty Portal
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <div className="text-[11px] text-center text-slate-400 mt-2 font-mono">
-                  Includes 1-Click Demo Teacher Access
-                </div>
-              </div>
-            </div>
-
-            {/* Student Panel */}
-            <div className="p-8 rounded-2xl bg-gradient-to-b from-white to-slate-50 border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
-              <div>
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-700 mb-5">
-                  <GraduationCap className="w-5 h-5" />
-                </div>
-                <div className="text-xs font-mono uppercase tracking-wider text-slate-500 mb-1 font-semibold">Students & Examinees</div>
-                <h3 className="text-xl font-bold text-slate-900 mb-2">Student Access</h3>
-                <p className="text-xs sm:text-sm text-slate-600 leading-relaxed mb-6">
-                  Enter your 6-character room code to join live timed internal assessments, take tests under controlled proctored conditions, and review explanations.
-                </p>
-              </div>
-              <div>
-                <Link
-                  href="/student"
-                  className="w-full py-3 px-4 rounded-xl bg-white text-slate-900 border border-slate-200 font-semibold text-xs sm:text-sm hover:bg-slate-50 hover:border-slate-300 transition-all flex items-center justify-center gap-2 shadow-sm"
-                >
-                  Join with Room Code
-                  <ArrowRight className="w-4 h-4 text-slate-500" />
-                </Link>
-                <div className="text-[11px] text-center text-slate-400 mt-2 font-mono">
-                  Room code: <strong>DEMO26</strong> ready for instant test
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Capabilities Section */}
-      <section id="features" className="py-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="max-w-2xl mb-14">
-          <div className="text-xs font-mono uppercase tracking-wider text-blue-600 font-bold mb-2">Platform Capabilities</div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-            Everything needed for controlled internal assessments.
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Select your workspace
           </h2>
-          <p className="text-sm text-slate-500 mt-2">
-            Engineered for academic rigor, zero hallucination, and student feedback.
+          <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
+            Optimized, focused interfaces designed for faculty and students.
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
-              <FileText className="w-5 h-5" />
+        <div className="grid md:grid-cols-2 gap-5 lg:gap-6 max-w-5xl mx-auto">
+          {/* Teacher Portal Box */}
+          <div className="rounded-3xl bg-white dark:bg-[#0A0A0A] border border-slate-200/90 dark:border-zinc-800 p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-zinc-900 border border-blue-100 dark:border-zinc-800 flex items-center justify-center text-blue-600 dark:text-blue-400 mb-4 shadow-xs">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div className="text-[11px] font-mono font-bold tracking-widest uppercase text-slate-500 dark:text-zinc-400 mb-1.5">
+                FACULTY & EVALUATORS
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">
+                Teacher Portal
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed mb-6">
+                Upload syllabus PDFs, generate source-grounded questions with Gemini Flash, review QA drafts, launch live rooms, and inspect class integrity reports.
+              </p>
             </div>
-            <h4 className="font-bold text-sm text-slate-900 mb-1.5">Source-Grounded Questions</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">Every question links directly back to exact page numbers and textbook excerpts.</p>
+
+            <Link
+              href="/teacher/dashboard"
+              className="w-full py-3.5 px-6 rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-sm hover:shadow"
+            >
+              <span>Enter Faculty Portal</span>
+              <ArrowRight className="w-4 h-4 text-white dark:text-black" />
+            </Link>
           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
-              <Lock className="w-5 h-5" />
+          {/* Student Access Box */}
+          <div className="rounded-3xl bg-white dark:bg-[#0A0A0A] border border-slate-200/90 dark:border-zinc-800 p-6 sm:p-8 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-zinc-700 transition-all flex flex-col justify-between">
+            <div>
+              <div className="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-zinc-900 border border-emerald-100 dark:border-zinc-800 flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-4 shadow-xs">
+                <GraduationCap className="w-5 h-5" />
+              </div>
+              <div className="text-[11px] font-mono font-bold tracking-widest uppercase text-slate-500 dark:text-zinc-400 mb-1.5">
+                STUDENTS & EXAMINEES
+              </div>
+              <h3 className="text-xl font-extrabold text-slate-900 dark:text-white mb-2 tracking-tight">
+                Student Access
+              </h3>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-zinc-400 leading-relaxed mb-6">
+                Enter your 6-character room code to join live timed internal assessments, take tests under controlled proctored conditions, and review explanations.
+              </p>
             </div>
-            <h4 className="font-bold text-sm text-slate-900 mb-1.5">Full-Screen 2-Strike Mode</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">Strike 1 issues an in-browser warning; Strike 2 triggers an authoritative server auto-submit.</p>
-          </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
-              <Layers className="w-5 h-5" />
-            </div>
-            <h4 className="font-bold text-sm text-slate-900 mb-1.5">Randomized Questions & Options</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">Stable option IDs prevent answer leaks while delivering unique layouts per examinee.</p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
-              <Clock className="w-5 h-5" />
-            </div>
-            <h4 className="font-bold text-sm text-slate-900 mb-1.5">Authoritative Server Clocks</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">Exam clocks synchronize directly with server timestamps to prevent client clock tampering.</p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
-              <Award className="w-5 h-5" />
-            </div>
-            <h4 className="font-bold text-sm text-slate-900 mb-1.5">Deterministic Leaderboards</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">Ranked primarily by score, tie-broken by verified server duration and submission timestamp.</p>
-          </div>
-
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm hover:border-slate-300 transition-all">
-            <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center mb-4">
-              <BarChart3 className="w-5 h-5" />
-            </div>
-            <h4 className="font-bold text-sm text-slate-900 mb-1.5">Topic-Level Mastery Insights</h4>
-            <p className="text-xs text-slate-600 leading-relaxed">Instant class accuracy breakdown per syllabus topic with Gemini pedagogical feedback.</p>
+            <Link
+              href="/student"
+              className="w-full py-3.5 px-6 rounded-2xl bg-white dark:bg-zinc-900 text-slate-900 dark:text-white border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 shadow-xs hover:border-slate-300 dark:hover:border-zinc-700"
+            >
+              <span>Join with Room Code</span>
+              <ArrowRight className="w-4 h-4 text-slate-500 dark:text-zinc-400" />
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* Safeguards Section */}
-      <section id="safeguards" className="py-16 bg-slate-900 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-mono font-bold uppercase mb-4 border border-amber-500/30">
-              <Shield className="w-3.5 h-3.5" />
-              Proctoring Safeguards
-            </div>
-            <h2 className="text-3xl font-extrabold tracking-tight mb-4">
-              Designed for controlled assessments.
-            </h2>
-            <p className="text-sm text-slate-300 leading-relaxed mb-8">
-              Multiple safeguards help reduce common forms of academic misconduct without making unrealistic claims of absolute browser unbreakability.
-            </p>
+      {/* Subtle Section Divider */}
+      <div className="w-full border-t border-slate-200/80 dark:border-zinc-800/80" />
 
-            <div className="grid sm:grid-cols-2 gap-4 text-xs">
-              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 flex items-start gap-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block font-semibold mb-0.5">Enforced Full-Screen Mode:</strong>
-                  <span className="text-slate-400">Exiting full-screen logs an integrity event. First exit warns; second auto-submits.</span>
+      {/* 3D Scroll Perspective Container for Interactive Preview */}
+      <section id="preview" className="py-4 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full scroll-mt-20">
+        <ContainerScroll>
+          <div id="preview" className="w-full rounded-2xl border border-slate-200 dark:border-zinc-800 bg-white dark:bg-[#0A0A0A] shadow-2xl overflow-hidden">
+            {/* Top Bar with Apple Traffic Light Window Controls */}
+            <div className="px-4 py-3 bg-slate-50 dark:bg-black border-b border-slate-200 dark:border-zinc-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2 font-mono group/traffic">
+                {/* Apple Red - Close / Cross */}
+                <div className="w-3 h-3 rounded-full bg-[#FF5F56] border border-[#E0443E] flex items-center justify-center text-[#4C0000] shadow-xs cursor-pointer">
+                  <svg className="w-1.5 h-1.5 opacity-70 group-hover/traffic:opacity-100 transition-opacity" viewBox="0 0 6 6" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+                    <path d="M1 1L5 5M5 1L1 5" />
+                  </svg>
                 </div>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 flex items-start gap-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block font-semibold mb-0.5">Tab & Window Visibility:</strong>
-                  <span className="text-slate-400">Window blur and visibility change events are timestamped and logged to the teacher audit.</span>
+
+                {/* Apple Yellow - Minimize / Minus */}
+                <div className="w-3 h-3 rounded-full bg-[#FFBD2E] border border-[#DEA123] flex items-center justify-center text-[#5A3F00] shadow-xs cursor-pointer">
+                  <svg className="w-1.5 h-1.5 opacity-70 group-hover/traffic:opacity-100 transition-opacity" viewBox="0 0 6 6" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">
+                    <path d="M1 3H5" />
+                  </svg>
                 </div>
-              </div>
-              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 flex items-start gap-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block font-semibold mb-0.5">Server-Side Authority:</strong>
-                  <span className="text-slate-400">Correct answers are never sent to the browser before submission. All scores are server-evaluated.</span>
+
+                {/* Apple Green - Fullscreen / Expand */}
+                <div className="w-3 h-3 rounded-full bg-[#27C93F] border border-[#1AAB29] flex items-center justify-center text-[#004D0D] shadow-xs cursor-pointer">
+                  <svg className="w-1.5 h-1.5 opacity-70 group-hover/traffic:opacity-100 transition-opacity" viewBox="0 0 6 6" fill="currentColor">
+                    <path d="M1 1.5L3 1.5L1 3.5V1.5ZM5 4.5L3 4.5L5 2.5V4.5Z" />
+                  </svg>
                 </div>
+
+                <span className="ml-2 font-medium text-slate-700 dark:text-zinc-300">quizsom.internal/preview</span>
               </div>
-              <div className="p-4 rounded-xl bg-slate-800/80 border border-slate-700 flex items-start gap-3">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                <div>
-                  <strong className="text-white block font-semibold mb-0.5">Single Attempt Lock:</strong>
-                  <span className="text-slate-400">Unique attempt IDs prevent concurrent attempts or browser refresh resets.</span>
+
+              {/* Interactive Tab Switcher */}
+              <div className="flex items-center gap-1 bg-white dark:bg-black p-1 rounded-lg border border-slate-200 dark:border-zinc-800">
+                <button
+                  onClick={() => setActivePreviewTab('teacher')}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    activePreviewTab === 'teacher'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Faculty View
+                </button>
+                <button
+                  onClick={() => setActivePreviewTab('room')}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    activePreviewTab === 'room'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Live Room
+                </button>
+                <button
+                  onClick={() => setActivePreviewTab('student')}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    activePreviewTab === 'student'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Exam Screen
+                </button>
+                <button
+                  onClick={() => setActivePreviewTab('grounding')}
+                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                    activePreviewTab === 'grounding'
+                      ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
+                      : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  Grounding
+                </button>
+              </div>
+            </div>
+
+            {/* Interactive Preview Content */}
+            <div className="p-6 sm:p-8 bg-white dark:bg-[#0A0A0A] min-h-[360px]">
+              {activePreviewTab === 'teacher' && (
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-zinc-800">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-zinc-900 text-blue-700 dark:text-zinc-200 border border-blue-200 dark:border-zinc-800">
+                          CS301
+                        </span>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Database Management Systems — IA 01</h3>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Module 2: Relational Model & Schema Normalization</p>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs font-mono">
+                      <div>
+                        <div className="text-[10px] text-slate-400 dark:text-zinc-500">ROOM CODE</div>
+                        <div className="text-base font-bold text-slate-900 dark:text-white">CS301A</div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] text-slate-400 dark:text-zinc-500">STUDENTS</div>
+                        <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">48 Enrolled</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Class Average</div><div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">72%</div><div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">+4% vs Pre-Test</div></div>
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Median Score</div><div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">74%</div><div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">Highest: 96% · Lowest: 38%</div></div>
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Turnout</div><div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">48 / 48</div><div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">100% Completion</div></div>
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Integrity Events</div><div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">3 Logged</div><div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">1 Auto-submit (Strike 2)</div></div>
+                  </div>
+
+                  <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-black border border-blue-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-4 h-4 relative shrink-0">
+                        <Image src="/gemini-star.png" alt="Gemini" width={16} height={16} className="object-contain" unoptimized />
+                      </div>
+                      <span className="text-slate-700 dark:text-zinc-300">
+                        <strong className="text-slate-900 dark:text-white">AI Pedagogical Insight:</strong> Students showed 88% retention on 1NF/2NF definitions, but 61% accuracy on 3NF vs BCNF dependency preservation trade-offs.
+                      </span>
+                    </div>
+                    <Link href="/teacher/dashboard" className="text-blue-600 dark:text-zinc-200 font-bold hover:underline shrink-0 ml-4">
+                      Open Full Dashboard →
+                    </Link>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {activePreviewTab === 'room' && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
+                      <span className="text-xs font-bold uppercase font-mono text-emerald-700 dark:text-emerald-400">Live Room Telemetry Stream</span>
+                    </div>
+                    <span className="text-xs font-mono text-slate-500 dark:text-zinc-400">Room Code: CS301A</span>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="p-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-black flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-bold flex items-center justify-center text-slate-900 dark:text-white">AI</span>
+                        <div>
+                          <strong className="text-slate-900 dark:text-white">Ananya Iyer</strong>
+                          <span className="text-slate-400 dark:text-zinc-500 font-mono ml-2">2024CS1012</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        Submitted · 96% (08:41)
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-amber-200 dark:border-amber-900/60 bg-amber-50/50 dark:bg-amber-950/20 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-900/80 font-mono text-[10px] font-bold text-amber-800 dark:text-amber-200 flex items-center justify-center">RP</span>
+                        <div>
+                          <strong className="text-slate-900 dark:text-white">Rohan Patil</strong>
+                          <span className="text-slate-400 dark:text-zinc-500 font-mono ml-2">2024CS1089</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-100 dark:bg-amber-900/90 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
+                        1 Full-screen Exit (Warned)
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/80 font-mono text-[10px] font-bold text-rose-800 dark:text-rose-200 flex items-center justify-center">PS</span>
+                        <div>
+                          <strong className="text-slate-900 dark:text-white">Priya Shah</strong>
+                          <span className="text-slate-400 dark:text-zinc-500 font-mono ml-2">2024CS1064</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-rose-100 dark:bg-rose-900/90 text-rose-800 dark:text-rose-200 border border-rose-300 dark:border-rose-700">
+                        Auto-Submitted (Strike 2 Exceeded)
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right pt-2">
+                    <Link href="/teacher/rooms/CS301A" className="text-xs font-bold text-slate-900 dark:text-white hover:underline">
+                      View Live Room Console →
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {activePreviewTab === 'student' && (
+                <div className="space-y-4 max-w-xl mx-auto">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800 text-xs">
+                    <span className="font-mono font-bold text-blue-700 dark:text-zinc-200 bg-blue-50 dark:bg-zinc-900 px-2 py-0.5 rounded border border-blue-200 dark:border-zinc-800">
+                      QUESTION 7 OF 15
+                    </span>
+                    <div className="flex items-center gap-1.5 font-mono font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-zinc-900 px-2.5 py-1 rounded">
+                      <Clock className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
+                      <span>08:41</span>
+                    </div>
+                  </div>
+
+                  <div className="text-sm font-bold text-slate-900 dark:text-white">
+                    Which normal form specifically requires eliminating partial functional dependencies?
+                  </div>
+
+                  <div className="space-y-2 text-xs">
+                    <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-black text-slate-700 dark:text-zinc-300 flex items-center gap-2">
+                      <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">A</span>
+                      <span>First Normal Form (1NF)</span>
+                    </div>
+                    <div className="p-3 rounded-xl border border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-black dark:border-white font-medium flex items-center justify-between shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-slate-800 text-white dark:bg-zinc-200 dark:text-black">B</span>
+                        <span>Second Normal Form (2NF)</span>
+                      </div>
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                    </div>
+                    <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-black text-slate-700 dark:text-zinc-300 flex items-center gap-2">
+                      <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">C</span>
+                      <span>Third Normal Form (3NF)</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activePreviewTab === 'grounding' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 text-xs space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-blue-700 dark:text-zinc-200">RAG CONTEXT CITATION</span>
+                      <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">Verified Grounding</span>
+                    </div>
+                    <div className="text-slate-900 dark:text-white font-semibold">
+                      Document: DBMS Module 2: Relational Model & Normalization (PDF)
+                    </div>
+                    <div className="text-slate-600 dark:text-zinc-300 font-mono text-[11px] bg-white dark:bg-black p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
+                      &quot;Section 3: Second Normal Form (2NF). A relation schema R is in 2NF if it is in 1NF and every non-prime attribute is fully functionally dependent on every candidate key, strictly eliminating partial dependencies.&quot;
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
+                      Page 3 · Section 3 · Chunks indexed: 4
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        </ContainerScroll>
       </section>
 
-      {/* Minimal Academic Footer */}
-      <footer className="mt-auto bg-white border-t border-slate-200 py-10 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
-          <Logo size="sm" />
+      {/* Subtle Section Divider */}
+      <div className="w-full border-t border-slate-200/80 dark:border-zinc-800/80" />
 
-          <div className="flex items-center gap-6 font-medium">
-            <Link href="/teacher/dashboard" className="hover:text-slate-900 transition-colors">
-              Teachers
-            </Link>
-            <Link href="/student" className="hover:text-slate-900 transition-colors">
-              Students
-            </Link>
-            <Link href="/#safeguards" className="hover:text-slate-900 transition-colors">
-              Security
-            </Link>
-            <span className="font-mono text-slate-400">Version 1.0</span>
-          </div>
+      {/* Platform Capabilities Section with Real Grounded BentoGridShowcase */}
+      <section id="features" className="py-10 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+        <div className="max-w-2xl mb-8">
+          <div className="text-xs font-mono uppercase tracking-wider text-blue-600 dark:text-zinc-400 font-bold mb-1.5">Platform Capabilities</div>
+          <h2 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+            Everything needed for controlled internal assessments.
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-zinc-400 mt-1.5">
+            Engineered for academic rigor, syllabus grounding, and transparent proctoring.
+          </p>
         </div>
-      </footer>
+
+        {/* Bento Grid Showcase for Real QuizSom Features */}
+        <BentoGridShowcase
+          integration={
+            <Card className="flex h-full flex-col justify-between p-6 sm:p-7 bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+              <div>
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 dark:bg-zinc-900 border border-blue-100 dark:border-zinc-800 shadow-xs">
+                  <Image
+                    src="/gemini-star.png"
+                    alt="Google Gemini"
+                    width={26}
+                    height={26}
+                    className="object-contain"
+                    unoptimized
+                    priority
+                  />
+                </div>
+                <Badge variant="outline" className="mb-2.5 text-blue-600 dark:text-zinc-300 border-blue-200 dark:border-zinc-800 font-mono text-[10px] uppercase">
+                  PDF Syllabus Grounding
+                </Badge>
+                <CardTitle className="text-xl font-bold mb-2">Source-Grounded Questions</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  Upload university course syllabus PDFs and reference textbooks. QuizSom indexes every module chunk with Gemini Flash, generating MCQs with exact page citations and verifiable textbook excerpts.
+                </CardDescription>
+              </div>
+              <CardFooter className="p-0 pt-6 mt-auto flex items-center justify-between border-t border-slate-100 dark:border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-slate-500 dark:text-zinc-400" />
+                  <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300">Page Citations</span>
+                </div>
+                <Switch
+                  checked={showCitations}
+                  onCheckedChange={setShowCitations}
+                  aria-label="Toggle page citations"
+                />
+              </CardFooter>
+            </Card>
+          }
+          trackers={
+            <Card className="h-full bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+              <CardContent className="flex h-full flex-col justify-between p-6">
+                <div>
+                  <CardTitle className="text-base font-bold">Live Room Telemetry</CardTitle>
+                  <CardDescription className="text-xs">Real-Time Examinee Audit</CardDescription>
+                </div>
+                <div className="flex items-center justify-between pt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-bold flex items-center justify-center text-slate-800 dark:text-zinc-200">
+                      AI
+                    </span>
+                    <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950 font-mono text-[10px] font-bold flex items-center justify-center text-amber-800 dark:text-amber-200">
+                      RP
+                    </span>
+                    <span className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-950 font-mono text-[10px] font-bold flex items-center justify-center text-rose-800 dark:text-rose-200">
+                      PS
+                    </span>
+                    <span className="text-xs font-mono text-slate-400 dark:text-zinc-500">+45</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    <span>Active Session</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          }
+          statistic={
+            <Card className="relative h-full w-full overflow-hidden bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+              <div
+                className="absolute inset-0 opacity-15 dark:opacity-20"
+                style={{
+                  backgroundImage: "radial-gradient(#64748B 1px, transparent 1px)",
+                  backgroundSize: "14px 14px",
+                }}
+              />
+              <CardContent className="relative z-10 flex flex-col h-full items-center justify-center p-6 text-center">
+                <span className="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white">2-Strike</span>
+                <span className="text-xs font-mono uppercase font-bold text-amber-600 dark:text-amber-400 mt-1">Full-Screen Policy</span>
+              </CardContent>
+            </Card>
+          }
+          focus={
+            <Card className="h-full bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+              <CardContent className="flex h-full flex-col justify-between p-6">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base font-bold">Server-Side Authority</CardTitle>
+                    <CardDescription className="text-xs">Zero Client Answer Exposure</CardDescription>
+                  </div>
+                  <Badge variant="outline" className="border-blue-300 dark:border-zinc-700 text-blue-600 dark:text-zinc-300 text-[10px] font-mono">
+                    Protected
+                  </Badge>
+                </div>
+                <div className="my-1">
+                  <span className="text-3xl sm:text-4xl font-extrabold text-slate-900 dark:text-white">Server Clocks</span>
+                </div>
+                <div className="flex justify-between text-[11px] text-slate-500 dark:text-zinc-400 font-medium">
+                  <span>Tamper-Proof Timer</span>
+                  <span>Evaluated at Submit</span>
+                </div>
+              </CardContent>
+            </Card>
+          }
+          productivity={
+            <Card className="h-full bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+              <CardContent className="flex h-full flex-col justify-between p-6">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-zinc-900 text-blue-600 dark:text-zinc-300 flex items-center justify-center mb-2">
+                  <Shuffle className="w-4 h-4" />
+                </div>
+                <div>
+                  <CardTitle className="text-base font-bold">Anti-Cheat Randomization</CardTitle>
+                  <CardDescription className="text-xs">
+                    Shuffled question sequences and randomized option IDs per student prevent answer sharing in exam halls.
+                  </CardDescription>
+                </div>
+              </CardContent>
+            </Card>
+          }
+          shortcuts={
+            <Card className="h-full bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+              <CardContent className="flex h-full flex-wrap items-center justify-between gap-4 p-6">
+                <div className="max-w-md">
+                  <CardTitle className="text-base font-bold">Deterministic Leaderboards & Pedagogical Analytics</CardTitle>
+                  <CardDescription className="text-xs">
+                    Tie-breaking by verified server completion timestamps and instant topic-level accuracy breakdown for faculty.
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-mono">
+                    <span className="text-slate-400 dark:text-zinc-500 text-[10px] block">AVG SCORE</span>
+                    <strong className="text-slate-900 dark:text-white font-bold">72%</strong>
+                  </div>
+                  <div className="px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-xs font-mono">
+                    <span className="text-slate-400 dark:text-zinc-500 text-[10px] block">COMPLETION</span>
+                    <strong className="text-emerald-600 dark:text-emerald-400 font-bold">100%</strong>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          }
+        />
+      </section>
+
+      {/* Unified Seamless Footer & CTA Component */}
+      <FooterCTA />
     </div>
   );
 }

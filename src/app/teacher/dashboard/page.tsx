@@ -21,6 +21,50 @@ import {
 export default function TeacherDashboardPage() {
   const [assessments, setAssessments] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [facultyProfile, setFacultyProfile] = useState({
+    name: 'Dr. Arvind Ramanathan',
+    department: 'Computer Science & Engineering',
+    semester: 'Semester V',
+  });
+
+  useEffect(() => {
+    const loadProfile = () => {
+      try {
+        const saved = localStorage.getItem('quizsom_faculty_profile');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          setFacultyProfile({
+            name: parsed.name || 'Dr. Arvind Ramanathan',
+            department: parsed.department || 'Computer Science & Engineering',
+            semester: parsed.semester || 'Semester V',
+          });
+        }
+      } catch (e) {
+        console.warn('Error reading faculty profile:', e);
+      }
+    };
+
+    loadProfile();
+
+    const handleProfileUpdate = (e: any) => {
+      if (e.detail) {
+        setFacultyProfile({
+          name: e.detail.name || 'Dr. Arvind Ramanathan',
+          department: e.detail.department || 'Computer Science & Engineering',
+          semester: e.detail.semester || 'Semester V',
+        });
+      } else {
+        loadProfile();
+      }
+    };
+
+    window.addEventListener('faculty-profile-updated', handleProfileUpdate);
+    window.addEventListener('storage', loadProfile);
+    return () => {
+      window.removeEventListener('faculty-profile-updated', handleProfileUpdate);
+      window.removeEventListener('storage', loadProfile);
+    };
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -45,10 +89,10 @@ export default function TeacherDashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
           <div className="text-xs font-mono font-bold uppercase tracking-wider text-slate-500">
-            Semester V · Computer Science & Engineering
+            {facultyProfile.semester} · {facultyProfile.department}
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">
-            Good morning, Professor.
+            Good morning, {facultyProfile.name}.
           </h1>
         </div>
 
@@ -80,14 +124,14 @@ export default function TeacherDashboardPage() {
               </span>
             </div>
             <div className="text-base font-bold text-white mt-1">
-              CS301 — DBMS Internal Assessment 01 (Room: <span className="font-mono font-extrabold text-amber-300">DEMO26</span>)
+              CS301 — DBMS Internal Assessment 01 (Room: <span className="font-mono font-extrabold text-amber-300">CS301A</span>)
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3 relative z-10">
           <Link
-            href="/teacher/rooms/DEMO26"
+            href="/teacher/rooms/CS301A"
             className="px-4 py-2 rounded-xl bg-white text-slate-900 text-xs font-bold hover:bg-slate-100 transition-all flex items-center gap-1.5 shadow-sm"
           >
             Live Monitor
@@ -109,7 +153,7 @@ export default function TeacherDashboardPage() {
           <div className="text-xs text-slate-500 font-medium">Active Assessment Rooms</div>
           <div className="text-3xl font-extrabold text-slate-900 mt-2">2</div>
           <div className="text-[11px] text-emerald-600 mt-1 font-semibold flex items-center gap-1">
-            <span>DEMO26 & IA26X7</span>
+            <span>CS301-A & IA26X7</span>
           </div>
         </div>
 

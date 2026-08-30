@@ -14,7 +14,7 @@ import {
   FileText,
   Award,
   CheckCircle2,
-  Zap,
+  Lock,
 } from 'lucide-react';
 
 export default function StudentPortalPage() {
@@ -28,7 +28,7 @@ export default function StudentPortalPage() {
   const handleJoin = (e: React.FormEvent) => {
     e.preventDefault();
     if (!roomCode.trim()) {
-      setError('Please enter a 6-character room code');
+      setError('Please enter a valid room code');
       return;
     }
     if (!studentName.trim()) {
@@ -48,78 +48,58 @@ export default function StudentPortalPage() {
     router.push(`/exam/${cleanCode}`);
   };
 
-  const handleQuickDemo = () => {
-    setRoomCode('DEMO26');
-    setStudentName('Aarav Sharma');
-    setStudentRollNo('2024CS1048');
-    setError('');
-  };
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900 bg-grid-subtle">
+    <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#000000] flex flex-col text-slate-900 dark:text-white bg-grid-subtle transition-colors">
       <Navbar />
 
       <main className="max-w-4xl mx-auto w-full px-4 py-12 flex-1 space-y-12">
         {/* Join Assessment Card */}
-        <div className="max-w-xl mx-auto bg-white p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-card">
+        <div className="max-w-xl mx-auto bg-white dark:bg-[#0A0A0A] p-8 sm:p-10 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-sm">
           <div className="text-center mb-8">
-            <div className="w-14 h-14 relative mx-auto mb-3">
+            <div className="w-16 h-16 relative mx-auto mb-4">
               <Image
-                src="/logo.png"
+                src="/logo-icon.png"
                 alt="QuizSom Logo"
-                width={56}
-                height={56}
-                className="object-contain"
+                width={512}
+                height={512}
+                className="w-full h-full object-contain select-none drop-shadow-md"
+                unoptimized
+                priority
               />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
               Join Internal Assessment
             </h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
-              Enter the 6-character room code provided by your instructor on <strong className="text-slate-800">QuizSom</strong>.
+            <p className="text-xs sm:text-sm text-slate-500 dark:text-zinc-400 mt-1">
+              Enter the room code provided by your instructor on <strong className="text-slate-800 dark:text-zinc-200">QuizSom</strong>.
             </p>
           </div>
 
-          {/* Quick Demo Autofill Button */}
-          <div className="mb-6 p-3.5 rounded-xl bg-blue-50/80 border border-blue-100 flex items-center justify-between text-xs">
-            <div className="flex items-center gap-2">
-              <Zap className="w-4 h-4 text-blue-600" />
-              <span className="text-blue-950 font-bold">Quick Demo: CS301 DBMS Assessment</span>
-            </div>
-            <button
-              type="button"
-              onClick={handleQuickDemo}
-              className="px-3 py-1 rounded-lg bg-blue-600 text-white text-[11px] font-bold hover:bg-blue-700 transition-all shadow-sm"
-            >
-              Auto-Fill DEMO26
-            </button>
-          </div>
-
           {error && (
-            <div className="mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-700 font-semibold">
+            <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-300 font-semibold">
               {error}
             </div>
           )}
 
           <form onSubmit={handleJoin} className="space-y-4">
             <div>
-              <label className="block text-xs font-mono font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                Room Code (6 Characters)
+              <label className="block text-xs font-mono font-bold text-slate-700 dark:text-zinc-300 uppercase tracking-wider mb-1.5">
+                Room Code
               </label>
               <input
                 type="text"
                 value={roomCode}
                 onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
                 maxLength={8}
-                placeholder="e.g. DEMO26 or IA26X7"
+                placeholder="ENTER ROOM CODE"
                 required
-                className="input-academic text-center font-mono font-extrabold text-2xl tracking-widest uppercase text-slate-900 py-3"
+                className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl px-4 py-3.5 text-center font-mono font-extrabold text-2xl tracking-widest uppercase text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
               />
             </div>
 
             <div className="grid sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                   Full Name
                 </label>
                 <input
@@ -128,12 +108,12 @@ export default function StudentPortalPage() {
                   onChange={(e) => setStudentName(e.target.value)}
                   placeholder="e.g. Aarav Sharma"
                   required
-                  className="input-academic text-xs"
+                  className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="block text-xs font-bold text-slate-700 dark:text-zinc-300 mb-1">
                   Student ID / Roll No
                 </label>
                 <input
@@ -141,7 +121,7 @@ export default function StudentPortalPage() {
                   value={studentRollNo}
                   onChange={(e) => setStudentRollNo(e.target.value)}
                   placeholder="e.g. 2024CS1048"
-                  className="input-academic text-xs font-mono uppercase"
+                  className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 rounded-xl px-3.5 py-2.5 text-xs font-mono uppercase text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-zinc-600 focus:outline-none focus:border-slate-900 dark:focus:border-white transition-colors"
                 />
               </div>
             </div>
@@ -149,48 +129,48 @@ export default function StudentPortalPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-primary py-3.5 text-sm font-bold mt-4 shadow-sm"
+              className="w-full py-3.5 rounded-xl bg-slate-900 text-white hover:bg-slate-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200 font-bold text-sm transition-all flex items-center justify-center gap-2 shadow-sm mt-4"
             >
-              Continue to Assessment Briefing
-              <ArrowRight className="w-4 h-4" />
+              <span>Continue to Assessment Briefing</span>
+              <ArrowRight className="w-4 h-4 text-white dark:text-black" />
             </button>
           </form>
         </div>
 
         {/* Student Academic History & Recent Results */}
         <div className="max-w-2xl mx-auto space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-            <h2 className="text-sm font-bold text-slate-900">Your Recent Assessment Results</h2>
-            <span className="text-[11px] text-slate-500 font-mono">Enrolled: CS Dept (Semester V)</span>
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-zinc-800">
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Recent Assessment Results</h2>
+            <span className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">Enrolled: CS Dept (Semester V)</span>
           </div>
 
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm space-y-4 hover:border-slate-300 transition-all">
+          <div className="p-6 rounded-2xl bg-white dark:bg-[#0A0A0A] border border-slate-200 dark:border-zinc-800 shadow-sm space-y-4 hover:border-slate-300 dark:hover:border-zinc-700 transition-all">
             <div className="flex items-start justify-between">
               <div>
-                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200">
+                <span className="font-mono text-[10px] font-bold px-2 py-0.5 rounded bg-blue-50 dark:bg-zinc-900 text-blue-700 dark:text-zinc-300 border border-blue-200 dark:border-zinc-800">
                   CS301
                 </span>
-                <h3 className="text-base font-bold text-slate-900 mt-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1">
                   DBMS — Internal Assessment 01
                 </h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 dark:text-zinc-400">
                   Relational Model & Normalization · 15 Questions
                 </p>
               </div>
 
               <div className="text-right">
-                <div className="text-2xl font-extrabold text-slate-900">82%</div>
-                <div className="text-[11px] font-mono font-bold text-emerald-600">Rank #7 in Class</div>
+                <div className="text-2xl font-extrabold text-slate-900 dark:text-white">82%</div>
+                <div className="text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400">Rank #7 in Class</div>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
-              <div className="text-slate-500 text-[11px]">
+            <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+              <div className="text-slate-500 dark:text-zinc-400 text-[11px]">
                 Strong: 1NF & 2NF • Focus Revision: Lossless Decomposition
               </div>
               <Link
-                href="/exam/DEMO26/result"
-                className="text-blue-600 font-bold hover:underline text-xs flex items-center gap-1"
+                href="/exam/CS301A/result"
+                className="text-blue-600 dark:text-zinc-300 font-bold hover:underline text-xs flex items-center gap-1"
               >
                 Review Answers & Explanations →
               </Link>

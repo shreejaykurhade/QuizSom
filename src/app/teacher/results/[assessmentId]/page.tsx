@@ -78,7 +78,7 @@ export default function TeacherResultsAnalyticsPage() {
 
         <div className="flex items-center gap-2.5">
           <Link
-            href="/teacher/rooms/DEMO26"
+            href="/teacher/rooms/CS301A"
             className="btn-secondary py-2 px-3.5 text-xs font-semibold"
           >
             Live Room View
