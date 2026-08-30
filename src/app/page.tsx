@@ -274,7 +274,6 @@ export default function LandingPage() {
                       className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
                     >
                       <span>AS</span>
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0A0A0A]" />
                     </div>
 
                     {/* Examinee 2 - Ananya */}
@@ -283,7 +282,6 @@ export default function LandingPage() {
                       className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
                     >
                       <span>AI</span>
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0A0A0A]" />
                     </div>
 
                     {/* Examinee 3 - Rohan */}
@@ -292,7 +290,6 @@ export default function LandingPage() {
                       className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
                     >
                       <span>RP</span>
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-white dark:ring-[#0A0A0A]" />
                     </div>
 
                     {/* Examinee 4 - Priya */}
@@ -301,7 +298,6 @@ export default function LandingPage() {
                       className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-red-600 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
                     >
                       <span>PS</span>
-                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#0A0A0A]" />
                     </div>
 
                     {/* Count Pill */}
