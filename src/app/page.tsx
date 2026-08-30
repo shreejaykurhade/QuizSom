@@ -196,7 +196,7 @@ export default function LandingPage() {
         {/* Bento Grid Showcase for Real QuizSom Features */}
         <BentoGridShowcase
           integration={
-            <Card className="flex h-full flex-col justify-between p-6 sm:p-7 bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+            <Card className="flex h-full flex-col justify-between p-6 sm:p-7 bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800 relative overflow-hidden">
               <div>
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 dark:bg-zinc-900 border border-blue-100 dark:border-zinc-800 shadow-xs">
                   <Image
@@ -216,6 +216,24 @@ export default function LandingPage() {
                 <CardDescription className="text-xs sm:text-sm">
                   Upload university course syllabus PDFs and reference textbooks. QuizSom indexes every module chunk with Gemini Flash, generating MCQs with exact page citations and verifiable textbook excerpts.
                 </CardDescription>
+
+                {/* 4K Mascot in the Middle Blank Space */}
+                <div className="my-6 sm:my-8 flex items-center justify-center relative">
+                  <motion.div
+                    whileHover={{ scale: 1.06, rotate: [0, -3, 3, 0] }}
+                    transition={{ duration: 0.4 }}
+                    className="relative w-44 h-44 sm:w-52 sm:h-52 drop-shadow-md cursor-pointer"
+                  >
+                    <Image
+                      src="/gemini-mascot-idea.png"
+                      alt="Gemini AI Mascot"
+                      fill
+                      className="object-contain"
+                      unoptimized
+                      priority
+                    />
+                  </motion.div>
+                </div>
               </div>
               <CardFooter className="p-0 pt-6 mt-auto flex items-center justify-between border-t border-slate-100 dark:border-zinc-800">
                 <div className="flex items-center gap-2">
