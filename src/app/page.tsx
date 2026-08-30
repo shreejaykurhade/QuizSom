@@ -249,29 +249,70 @@ export default function LandingPage() {
             </Card>
           }
           trackers={
-            <Card className="h-full bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800">
+            <Card className="h-full bg-white dark:bg-[#0A0A0A] border-slate-200 dark:border-zinc-800 overflow-hidden relative">
               <CardContent className="flex h-full flex-col justify-between p-6">
-                <div>
-                  <CardTitle className="text-base font-bold">Live Room Telemetry</CardTitle>
-                  <CardDescription className="text-xs">Real-Time Examinee Audit</CardDescription>
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base font-bold">Live Room Telemetry</CardTitle>
+                    <CardDescription className="text-xs">Real-Time Examinee Audit</CardDescription>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                    </span>
+                    <span>Active Sync</span>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between pt-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-bold flex items-center justify-center text-slate-800 dark:text-zinc-200">
-                      AI
-                    </span>
-                    <span className="w-6 h-6 rounded-full bg-amber-100 dark:bg-amber-950 font-mono text-[10px] font-bold flex items-center justify-center text-amber-800 dark:text-amber-200">
-                      RP
-                    </span>
-                    <span className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-950 font-mono text-[10px] font-bold flex items-center justify-center text-rose-800 dark:text-rose-200">
-                      PS
-                    </span>
-                    <span className="text-xs font-mono text-slate-400 dark:text-zinc-500">+45</span>
+
+                {/* Sleek Overlapping Dynamic Avatar Stack */}
+                <div className="flex items-center justify-between pt-3">
+                  <div className="flex items-center -space-x-2.5 hover:space-x-1 transition-all duration-300">
+                    {/* Examinee 1 - Aarav */}
+                    <div
+                      title="Aarav Sharma · Active (Q14/15)"
+                      className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-blue-600 to-indigo-500 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
+                    >
+                      <span>AS</span>
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0A0A0A]" />
+                    </div>
+
+                    {/* Examinee 2 - Ananya */}
+                    <div
+                      title="Ananya Iyer · Submitted (96%)"
+                      className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
+                    >
+                      <span>AI</span>
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#0A0A0A]" />
+                    </div>
+
+                    {/* Examinee 3 - Rohan */}
+                    <div
+                      title="Rohan Patil · 1 Warning Logged"
+                      className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
+                    >
+                      <span>RP</span>
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-amber-400 ring-2 ring-white dark:ring-[#0A0A0A]" />
+                    </div>
+
+                    {/* Examinee 4 - Priya */}
+                    <div
+                      title="Priya Shah · Auto-Submitted (Strike 2)"
+                      className="group relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-tr from-rose-500 to-red-600 font-mono text-xs font-bold text-white shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-all duration-200 hover:scale-120 hover:z-30 hover:-translate-y-1 cursor-pointer"
+                    >
+                      <span>PS</span>
+                      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#0A0A0A]" />
+                    </div>
+
+                    {/* Count Pill */}
+                    <div className="flex h-9 items-center justify-center rounded-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-mono text-xs font-extrabold px-3 shadow-md ring-2 ring-white dark:ring-[#0A0A0A] transition-transform duration-200 hover:scale-110 hover:z-30 cursor-pointer">
+                      +44
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    <span>Active Session</span>
-                  </div>
+
+                  <span className="text-[11px] font-mono font-semibold text-slate-500 dark:text-zinc-400">
+                    48 Enrolled
+                  </span>
                 </div>
               </CardContent>
             </Card>
