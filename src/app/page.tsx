@@ -215,17 +215,17 @@ export default function LandingPage() {
               <div className="flex items-center gap-1 bg-white dark:bg-black p-1 rounded-lg border border-slate-200 dark:border-zinc-800">
                 <button
                   onClick={() => setActivePreviewTab('teacher')}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     activePreviewTab === 'teacher'
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
                       : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  Faculty View
+                  Faculty Analytics
                 </button>
                 <button
                   onClick={() => setActivePreviewTab('room')}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     activePreviewTab === 'room'
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
                       : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
@@ -235,23 +235,23 @@ export default function LandingPage() {
                 </button>
                 <button
                   onClick={() => setActivePreviewTab('student')}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     activePreviewTab === 'student'
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
                       : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  Exam Screen
+                  Student Exam
                 </button>
                 <button
                   onClick={() => setActivePreviewTab('grounding')}
-                  className={`px-3 py-1 rounded-md text-xs font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                     activePreviewTab === 'grounding'
                       ? 'bg-slate-900 text-white dark:bg-white dark:text-black shadow-sm'
                       : 'text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  Grounding
+                  Playground Arena
                 </button>
               </div>
             </div>
@@ -264,29 +264,49 @@ export default function LandingPage() {
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-semibold px-2 py-0.5 rounded bg-blue-50 dark:bg-zinc-900 text-blue-700 dark:text-zinc-200 border border-blue-200 dark:border-zinc-800">
-                          CS301
+                          CS302
                         </span>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Course Assessment — IA 01</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                          Data Structures & Algorithms — IA 01
+                        </h3>
                       </div>
-                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">Module Evaluation: Core Concepts & Applied Problem Solving</p>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
+                        Module Evaluation: Trees, Graph Algorithms & Dynamic Programming
+                      </p>
                     </div>
                     <div className="flex items-center gap-4 text-xs font-mono">
                       <div>
-                        <div className="text-[10px] text-slate-400 dark:text-zinc-500">ROOM CODE</div>
-                        <div className="text-base font-bold text-slate-900 dark:text-white">CS301A</div>
+                        <div className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-bold">ROOM CODE</div>
+                        <div className="text-base font-bold text-slate-900 dark:text-white">DSA204</div>
                       </div>
                       <div>
-                        <div className="text-[10px] text-slate-400 dark:text-zinc-500">STUDENTS</div>
-                        <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">48 Enrolled</div>
+                        <div className="text-[10px] text-slate-400 dark:text-zinc-500 uppercase font-bold">EXAMINEES</div>
+                        <div className="text-base font-bold text-emerald-600 dark:text-emerald-400">46 Submissions</div>
                       </div>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Class Average</div><div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">72%</div><div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">+4% vs Pre-Test</div></div>
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Median Score</div><div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">74%</div><div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">Highest: 96% · Lowest: 38%</div></div>
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Turnout</div><div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">48 / 48</div><div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">100% Completion</div></div>
-                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90"><div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Integrity Events</div><div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">3 Logged</div><div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">1 Auto-submit (Strike 2)</div></div>
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
+                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Class Average</div>
+                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">78%</div>
+                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">+5% vs Pre-Test</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
+                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Median Score</div>
+                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">80%</div>
+                      <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">Top: 98% · Min: 42%</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
+                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Turnout</div>
+                      <div className="text-2xl font-bold text-slate-900 dark:text-white mt-1">46 / 48</div>
+                      <div className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">96% Completion</div>
+                    </div>
+                    <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-100 dark:border-zinc-800/90">
+                      <div className="text-xs text-slate-500 dark:text-zinc-400 font-medium">Integrity Events</div>
+                      <div className="text-2xl font-bold text-amber-600 dark:text-amber-400 mt-1">2 Logged</div>
+                      <div className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5">1 Tab Switch Warning</div>
+                    </div>
                   </div>
 
                   <div className="p-4 rounded-xl bg-blue-50/50 dark:bg-black border border-blue-100 dark:border-zinc-800 flex items-center justify-between text-xs">
@@ -295,10 +315,10 @@ export default function LandingPage() {
                         <Image src="/gemini-star.png" alt="Gemini" width={16} height={16} className="object-contain" unoptimized />
                       </div>
                       <span className="text-slate-700 dark:text-zinc-300">
-                        <strong className="text-slate-900 dark:text-white">AI Pedagogical Insights:</strong> Source-grounded concept mastery and cognitive friction analysis generated dynamically from student assessment attempts.
+                        <strong className="text-slate-900 dark:text-white">AI Pedagogical Insights:</strong> 82% of students mastered Binary Search Trees & Heaps; 34% cognitive friction detected on Graph Topological Sort algorithms.
                       </span>
                     </div>
-                    <Link href="/teacher/dashboard" className="text-blue-600 dark:text-zinc-200 font-bold hover:underline shrink-0 ml-4">
+                    <Link href="/auth?role=faculty&next=%2Fteacher%2Fdashboard" className="text-blue-600 dark:text-zinc-200 font-bold hover:underline shrink-0 ml-4">
                       Open Full Dashboard →
                     </Link>
                   </div>
@@ -309,23 +329,40 @@ export default function LandingPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-zinc-800">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                      <span className="text-xs font-bold uppercase font-mono text-emerald-700 dark:text-emerald-400">Live Room Telemetry Stream</span>
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                      <span className="text-xs font-bold uppercase font-mono text-emerald-700 dark:text-emerald-400">
+                        Live Room Telemetry Stream
+                      </span>
                     </div>
-                    <span className="text-xs font-mono text-slate-500 dark:text-zinc-400">Room Code: CS301A</span>
+                    <span className="text-xs font-mono font-bold text-slate-700 dark:text-zinc-300">
+                      Room Code: <strong className="text-slate-900 dark:text-white">DSA204</strong>
+                    </span>
                   </div>
 
                   <div className="space-y-2">
                     <div className="p-3 rounded-lg border border-slate-200 dark:border-zinc-800 bg-white dark:bg-black flex items-center justify-between text-xs">
                       <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-bold flex items-center justify-center text-slate-900 dark:text-white">AI</span>
+                        <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-bold flex items-center justify-center text-slate-900 dark:text-white">AS</span>
                         <div>
-                          <strong className="text-slate-900 dark:text-white">Ananya Iyer</strong>
+                          <strong className="text-slate-900 dark:text-white">Aarav Sharma</strong>
                           <span className="text-slate-400 dark:text-zinc-500 font-mono ml-2">2024CS1012</span>
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-emerald-50 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
                         Submitted · 96% (08:41)
+                      </span>
+                    </div>
+
+                    <div className="p-3 rounded-lg border border-blue-200 dark:border-blue-900/60 bg-blue-50/40 dark:bg-blue-950/20 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-900/80 font-mono text-[10px] font-bold text-blue-800 dark:text-blue-200 flex items-center justify-center">PD</span>
+                        <div>
+                          <strong className="text-slate-900 dark:text-white">Priya Deshmukh</strong>
+                          <span className="text-slate-400 dark:text-zinc-500 font-mono ml-2">2024CS1045</span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-blue-100 dark:bg-blue-900/90 text-blue-800 dark:text-blue-200 border border-blue-300 dark:border-blue-700">
+                        In Progress · Q13/15 (04:18 left)
                       </span>
                     </div>
 
@@ -338,15 +375,15 @@ export default function LandingPage() {
                         </div>
                       </div>
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-100 dark:bg-amber-900/90 text-amber-800 dark:text-amber-200 border border-amber-300 dark:border-amber-700">
-                        1 Full-screen Exit (Warned)
+                        1 Tab Switch Warning Logged
                       </span>
                     </div>
 
                     <div className="p-3 rounded-lg border border-rose-200 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 flex items-center justify-between text-xs">
                       <div className="flex items-center gap-3">
-                        <span className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/80 font-mono text-[10px] font-bold text-rose-800 dark:text-rose-200 flex items-center justify-center">PS</span>
+                        <span className="w-6 h-6 rounded-full bg-rose-100 dark:bg-rose-900/80 font-mono text-[10px] font-bold text-rose-800 dark:text-rose-200 flex items-center justify-center">SK</span>
                         <div>
-                          <strong className="text-slate-900 dark:text-white">Priya Shah</strong>
+                          <strong className="text-slate-900 dark:text-white">Sneha Kulkarni</strong>
                           <span className="text-slate-400 dark:text-zinc-500 font-mono ml-2">2024CS1064</span>
                         </div>
                       </div>
@@ -357,7 +394,7 @@ export default function LandingPage() {
                   </div>
 
                   <div className="text-right pt-2">
-                    <Link href="/teacher/rooms/CS301A" className="text-xs font-bold text-slate-900 dark:text-white hover:underline">
+                    <Link href="/auth?role=faculty&next=%2Fteacher%2Frooms" className="text-xs font-bold text-slate-900 dark:text-white hover:underline">
                       View Live Room Console →
                     </Link>
                   </div>
@@ -377,24 +414,24 @@ export default function LandingPage() {
                   </div>
 
                   <div className="text-sm font-bold text-slate-900 dark:text-white">
-                    Which normal form specifically requires eliminating partial functional dependencies?
+                    Which data structure provides O(1) average-time complexity for key search and insertion operations?
                   </div>
 
                   <div className="space-y-2 text-xs">
                     <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-black text-slate-700 dark:text-zinc-300 flex items-center gap-2">
                       <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">A</span>
-                      <span>First Normal Form (1NF)</span>
+                      <span>Binary Search Tree (BST)</span>
                     </div>
                     <div className="p-3 rounded-xl border border-slate-900 bg-slate-900 text-white dark:bg-white dark:text-black dark:border-white font-medium flex items-center justify-between shadow-sm">
                       <div className="flex items-center gap-2">
                         <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-slate-800 text-white dark:bg-zinc-200 dark:text-black">B</span>
-                        <span>Second Normal Form (2NF)</span>
+                        <span>Hash Table with Chaining</span>
                       </div>
                       <CheckCircle2 className="w-4 h-4 text-emerald-400" />
                     </div>
                     <div className="p-3 rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-black text-slate-700 dark:text-zinc-300 flex items-center gap-2">
                       <span className="w-5 h-5 rounded font-mono font-bold flex items-center justify-center bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800">C</span>
-                      <span>Third Normal Form (3NF)</span>
+                      <span>Balanced AVL Tree</span>
                     </div>
                   </div>
                 </div>
@@ -402,20 +439,59 @@ export default function LandingPage() {
 
               {activePreviewTab === 'grounding' && (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-black border border-slate-200 dark:border-zinc-800 text-xs space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono font-bold text-blue-700 dark:text-zinc-200">RAG CONTEXT CITATION</span>
-                      <span className="text-[10px] font-mono text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">Verified Grounding</span>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                          STUDENT ARENA
+                        </span>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Operating Systems — Concurrency & Deadlocks
+                        </h4>
+                      </div>
+                      <p className="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">
+                        Source Notes: <strong className="text-slate-700 dark:text-zinc-300">OS_Unit2_Concurrency.pdf (14 Pages Indexed)</strong>
+                      </p>
                     </div>
-                    <div className="text-slate-900 dark:text-white font-semibold">
-                      Document: Course Module & Architecture Notes (PDF)
+
+                    <div className="flex items-center gap-2 font-mono text-xs">
+                      <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-white dark:bg-white dark:text-slate-900 font-bold">
+                        ROOM: PG4812
+                      </span>
                     </div>
-                    <div className="text-slate-600 dark:text-zinc-300 font-mono text-[11px] bg-white dark:bg-black p-3 rounded-lg border border-slate-200 dark:border-zinc-800">
-                      &quot;Section 2: Edge Architecture. Sensor devices and telemetry nodes interface through deterministic protocol pipelines to ensure low-latency data processing across distributed endpoints.&quot;
+                  </div>
+
+                  {/* Top 3 Live Rankings Podium */}
+                  <div className="grid grid-cols-3 gap-3 text-center">
+                    <div className="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 space-y-1">
+                      <div className="text-xs font-mono font-bold text-slate-500">🥈 #2</div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Rohan Patil</div>
+                      <div className="text-base font-extrabold font-mono text-slate-800 dark:text-zinc-200">80%</div>
+                      <div className="text-[10px] text-slate-400 font-mono">02m 45s</div>
                     </div>
-                    <div className="text-[11px] text-slate-500 dark:text-zinc-400 font-mono">
-                      Page 3 · Section 3 · Chunks indexed: 4
+
+                    <div className="p-3 rounded-2xl bg-gradient-to-b from-amber-50 to-white dark:from-zinc-800 dark:to-zinc-900 border border-amber-300 dark:border-amber-700 space-y-1">
+                      <div className="text-xs font-mono font-bold text-amber-700 dark:text-amber-400">🥇 #1 LEADER</div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Aarav Sharma</div>
+                      <div className="text-base font-extrabold font-mono text-amber-600 dark:text-amber-400">100%</div>
+                      <div className="text-[10px] text-slate-500 font-mono">02m 14s</div>
                     </div>
+
+                    <div className="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 space-y-1">
+                      <div className="text-xs font-mono font-bold text-slate-500">🥉 #3</div>
+                      <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Ananya Iyer</div>
+                      <div className="text-base font-extrabold font-mono text-slate-800 dark:text-zinc-200">80%</div>
+                      <div className="text-[10px] text-slate-400 font-mono">03m 10s</div>
+                    </div>
+                  </div>
+
+                  <div className="text-right pt-2">
+                    <Link
+                      href="/student/playground"
+                      className="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline flex items-center justify-end gap-1"
+                    >
+                      <span>Explore Student Playground →</span>
+                    </Link>
                   </div>
                 </div>
               )}
