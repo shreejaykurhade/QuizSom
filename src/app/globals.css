@@ -54,6 +54,27 @@ body {
   line-height: 1.5;
   letter-spacing: -0.011em;
   transition: background-color 0.25s ease, color 0.25s ease;
+  overflow-x: hidden;
+}
+
+/* Shared small-screen application shell. Both dashboards use an aside/nav
+   layout; convert its navigation into a touch-scrollable row on phones. */
+@media (max-width: 767px) {
+  aside > div:first-child > nav {
+    display: flex;
+    gap: 0.375rem;
+    overflow-x: auto;
+    padding: 0.75rem;
+    scrollbar-width: none;
+  }
+  aside > div:first-child > nav::-webkit-scrollbar { display: none; }
+  aside > div:first-child > nav > a {
+    flex: 0 0 auto;
+    min-height: 44px;
+    white-space: nowrap;
+  }
+  aside > div:last-child { display: none; }
+  button, a.btn-primary, a.btn-secondary { min-height: 44px; }
 }
 
 /* True Black OLED Dark Mode Global Overrides */
