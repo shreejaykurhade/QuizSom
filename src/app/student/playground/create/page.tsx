@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Gamepad2,
@@ -729,8 +730,32 @@ export default function CreatePlaygroundQuizPage() {
         <div className="space-y-6 bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 shadow-sm">
           {isGenerating ? (
             <div className="py-16 text-center space-y-4 max-w-md mx-auto">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-50 to-purple-50 border border-emerald-200 text-emerald-600 flex items-center justify-center mx-auto shadow-sm">
-                <Sparkles className="w-7 h-7 animate-spin" />
+              {/* Best Minimal Reload Animation with Centered Star */}
+              <div className="relative mx-auto w-20 h-20 flex items-center justify-center mb-2">
+                {/* Outer Subtle Track Ring */}
+                <div className="absolute inset-1 rounded-full border-2 border-slate-100 dark:border-zinc-800" />
+
+                {/* Fast Outer Gradient Spinning Ring */}
+                <div className="absolute inset-1 rounded-full border-2 border-transparent border-t-emerald-600 border-r-teal-500 border-b-indigo-500 animate-spin" />
+
+                {/* Counter-rotating Inner Precision Ring */}
+                <div
+                  className="absolute inset-3.5 rounded-full border-[1.5px] border-transparent border-t-teal-400 border-l-emerald-400 opacity-70"
+                  style={{ animation: 'spin 2s linear infinite reverse' }}
+                />
+
+                {/* Centered Gemini Star */}
+                <div className="relative z-10 w-8 h-8 flex items-center justify-center">
+                  <Image
+                    src="/gemini-star.png"
+                    alt="Gemini AI"
+                    width={28}
+                    height={28}
+                    className="object-contain animate-pulse select-none drop-shadow-sm"
+                    unoptimized
+                    priority
+                  />
+                </div>
               </div>
               <div>
                 <h3 className="text-base font-bold text-slate-900">Synthesizing Challenge Questions</h3>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import {
   Upload,
@@ -836,14 +837,32 @@ export default function CreateAssessmentWizard() {
       {/* STEP 3: LIVE GENERATION STAGES */}
       {step === 3 && (
         <div className="p-8 sm:p-12 rounded-2xl bg-white border border-slate-200 shadow-card text-center space-y-8 max-w-2xl mx-auto">
-          <div className="relative mx-auto w-16 h-16">
-            <div className="w-16 h-16 rounded-3xl bg-slate-900 text-white flex items-center justify-center shadow-lg">
-              <Sparkles className="w-8 h-8 text-amber-300 animate-spin" />
+          {/* Best Minimal Reload Animation with Centered Star */}
+          <div className="relative mx-auto w-20 h-20 flex items-center justify-center">
+            {/* Outer Subtle Track Ring */}
+            <div className="absolute inset-1 rounded-full border-2 border-slate-100 dark:border-zinc-800" />
+
+            {/* Fast Outer Gradient Spinning Ring */}
+            <div className="absolute inset-1 rounded-full border-2 border-transparent border-t-blue-600 border-r-indigo-500 border-b-emerald-500 animate-spin" />
+
+            {/* Counter-rotating Inner Precision Ring */}
+            <div
+              className="absolute inset-3.5 rounded-full border-[1.5px] border-transparent border-t-indigo-400 border-l-blue-400 opacity-70"
+              style={{ animation: 'spin 2s linear infinite reverse' }}
+            />
+
+            {/* Centered Gemini Star */}
+            <div className="relative z-10 w-8 h-8 flex items-center justify-center">
+              <Image
+                src="/gemini-star.png"
+                alt="Gemini AI"
+                width={28}
+                height={28}
+                className="object-contain animate-pulse select-none drop-shadow-sm"
+                unoptimized
+                priority
+              />
             </div>
-            <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-4 w-4 bg-blue-600"></span>
-            </span>
           </div>
 
           <div className="space-y-2">
